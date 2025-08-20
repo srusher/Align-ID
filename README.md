@@ -3,7 +3,7 @@
 
 ## Summary
 
-**Align-ID** is a bioinformatics workflow designed to generate taxonomic profiles for environmental samples derived from Oxford Nanopore and Illumia sequencing data. This workflow houses two separate analysis pipelines for long read and short read data sets:
+**Align-ID** is a bioinformatics workflow designed to generate taxonomic profiles from environmental samples sequenced by Oxford Nanopore and Illumia instruments using a competative alignment approach. This workflow houses two separate analysis pipelines for long read and short read data sets:
 
 **Long Read ID**
 1. _OPTIONAL_: Subsampling ([`BBMap`](https://github.com/BioInfoTools/BBMap))
