@@ -1,0 +1,355 @@
+
+ N E X T F L O W   ~  version 24.10.4
+
+Launching `main.nf` [distraught_kimura] DSL2 - revision: 395a1e54d0
+
+WARN: Access to undefined parameter `fasta` -- Initialise it to a default value eg. `params.fasta = some_value`
+WARN: The following invalid input values have been detected:
+
+* --igenomes_ignore: true
+* --workflow: short-read
+* --meta_sample: true
+* --memory_saver: false
+* --skip_subsample: true
+* --skip_merging: true
+* --skip_trimming: true
+* --skip_nonpareil: true
+* --skip_kraken2: true
+* --skip_fastqscreen: true
+* --skip_methaphlan: true
+* --skip_alignment_based_filtering: false
+* --skip_bbmap_dedup: true
+* --skip_extract_kraken_reads: true
+* --skip_assembly: false
+* --skip_binning: true
+* --skip_blast: true
+* --num_subsamples: 10000
+* --trim_tool: trimmomatic
+* --adapt_ref: /scicomp/home-pure/rtq0/EMEL/projects/metagenome-analysis/assets/short-read/sequencing-adapters.fasta
+* --trimmomatic_params: ILLUMINACLIP:/scicomp/home-pure/rtq0/EMEL/projects/metagenome-analysis/assets/short-read/sequencing-adapters.fasta:2:30:10 SLIDINGWINDOW:4:20 MINLEN:50
+* --seqtk_min_length: 150
+* --fastp_params: 
+* --adapter_auto_detect: false
+* --kraken_db_main: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/kraken-db/bact_arch_vir_fungi_amoeba-DB_41-mer
+* --kraken_conf: false
+* --kraken_tax_id: 
+* --include_children: false
+* --fastq_screen_conf: /scicomp/home-pure/rtq0/EMEL/projects/metagenome-analysis/assets/fastq_screen.conf
+* --methaphlan_db: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/metaphlan/metaphlan_databases
+* --minimap2_meta: all-genomes
+* --minimap2_index: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/short-read/ZYMO.mmi
+* --minimap2_mismatch_penalty: 8
+* --seqid2taxid_map: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/seqid2taxid_no-strain.map
+* --filter_alignment_by_id: false
+* --my_tax_ids: /scicomp/home-pure/rtq0/EMEL/projects/metagenome-analysis/assets/tax_ids_acanth-verm-naegleria.txt
+* --ncbi_taxonomy_nodes: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/nodes.dmp
+* --ncbi_taxonomy_names: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/names.dmp
+* --local_nodes_db: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Reference_Databases/taxonomy/nodes_sqlite3.db
+* --mapping_quality: 0
+* --non_standard_reference: false
+* --use_tmux_multiprocessing: true
+* --ref_fasta: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/reference/ATL_gene_revised.fasta
+* --ref_fasta_index: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/reference/ATL_gene_revised.fasta.fai
+* --assembler: megahit
+* --quast_ref: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/reference/bacteria_refseq.fna
+* --bin_QC: checkm
+* --checkm2_db: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/checkm2/database/CheckM2_database/uniref100.KO.1.dmnd
+* --use_blast_standard: false
+* --blast_standard_db: /scicomp/reference/ncbi-blast-databases/nt
+* --blast_db: /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/arch-bact-fung-hum-amoeba_refseq/arch-bact-fung-hum-amoeba_refseq
+* --blast_evalue: 1e-10
+* --blast_perc_identity: 90
+* --blast_target_seqs: 5
+* --kraken_args: 
+* --krakentools_args: 
+* --spades_args: --meta --only-assembler
+* --flye_args: --meta
+* --minimap2_args: -a -A2 -B8 -O12,32 -E2,1 -s40 -2 -K100g --secondary=no --split-prefix=tmp -t 16
+
+
+WARN: Access to undefined parameter `custom_config_base` -- Initialise it to a default value eg. `params.custom_config_base = some_value`
+
+
+------------------------------------------------------
+  EMEL-Metagenomics v1.0dev
+------------------------------------------------------
+Core Nextflow options
+  runName        : distraught_kimura
+  containerEngine: singularity
+  launchDir      : /scicomp/home-pure/rtq0/EMEL/projects/metagenome-analysis
+  workDir        : /scicomp/scratch/rtq0/nextflow
+  projectDir     : /scicomp/home-pure/rtq0/EMEL/projects/metagenome-analysis
+  userName       : rtq0
+  profile        : singularity,cluster_submit,short
+  configFiles    : 
+
+Input/output options
+  input          : assets/short-read/samplesheets/ZYMO_samplesheet.csv
+  outdir         : results/test/short/ZYMO-Extraction-MAPQ0
+
+Max job request options
+  max_cpus       : 20
+  max_memory     : 300.GB
+
+!! Only displaying parameters that differ from the pipeline defaults !!
+------------------------------------------------------
+If you use EMEL-Metagenomics for your analysis please cite:
+
+* The nf-core framework
+  https://doi.org/10.1038/s41587-020-0439-x
+
+* Software dependencies
+  https://github.com/EMEL-Metagenomics/blob/master/CITATIONS.md
+
+
+
+------------------------------------------------------
+  EMEL-Metagenomics v1.0dev
+------------------------------------------------------
+Core Nextflow options
+  runName        : distraught_kimura
+  containerEngine: singularity
+  launchDir      : /scicomp/home-pure/rtq0/EMEL/projects/metagenome-analysis
+  workDir        : /scicomp/scratch/rtq0/nextflow
+  projectDir     : /scicomp/home-pure/rtq0/EMEL/projects/metagenome-analysis
+  userName       : rtq0
+  profile        : singularity,cluster_submit,short
+  configFiles    : 
+
+Input/output options
+  input          : assets/short-read/samplesheets/ZYMO_samplesheet.csv
+  outdir         : results/test/short/ZYMO-Extraction-MAPQ0
+
+Max job request options
+  max_cpus       : 20
+  max_memory     : 300.GB
+
+!! Only displaying parameters that differ from the pipeline defaults !!
+------------------------------------------------------
+If you use EMEL-Metagenomics for your analysis please cite:
+
+* The nf-core framework
+  https://doi.org/10.1038/s41587-020-0439-x
+
+* Software dependencies
+  https://github.com/EMEL-Metagenomics/blob/master/CITATIONS.md
+
+[-        ] EME…UT_CHECK:SAMPLESHEET_CHECK -
+[-        ] EME…LYSIS:METASHORT:FASTQC_RAW -
+
+[-        ] EME…UT_CHECK:SAMPLESHEET_CHECK -
+[-        ] EME…LYSIS:METASHORT:FASTQC_RAW -
+[-        ] EME…YSIS:METASHORT:ALIGN_READS -
+[-        ] EME…TASHORT:ALIGNMENT_CLASSIFY -
+[-        ] EME…S:METASHORT:SAMTOOLS_STATS -
+[-        ] EME…ASHORT:SAMTOOLS_SORT_INDEX -
+[-        ] EME…RT:FASTQC_ALIGNED_FILTERED -
+[-        ] EME…ETASHORT:BEDTOOLS_BAMTOBED -
+[-        ] EME…HORT:GATK4_HAPLOTYPECALLER -
+[-        ] EME…LYSIS:METASHORT:IGVREPORTS -
+[-        ] EME…HORT:SAMTOOLS_FASTQ_MAPPED -
+[-        ] EME…CLASSIFICATION_GRAPH_READS -
+
+[-        ] EME…UT_CHECK:SAMPLESHEET_CHECK -
+[-        ] EME…LYSIS:METASHORT:FASTQC_RAW -
+[-        ] EME…YSIS:METASHORT:ALIGN_READS -
+[-        ] EME…TASHORT:ALIGNMENT_CLASSIFY -
+[-        ] EME…S:METASHORT:SAMTOOLS_STATS -
+[-        ] EME…ASHORT:SAMTOOLS_SORT_INDEX -
+[-        ] EME…RT:FASTQC_ALIGNED_FILTERED -
+[-        ] EME…ETASHORT:BEDTOOLS_BAMTOBED -
+[-        ] EME…HORT:GATK4_HAPLOTYPECALLER -
+[-        ] EME…LYSIS:METASHORT:IGVREPORTS -
+[-        ] EME…HORT:SAMTOOLS_FASTQ_MAPPED -
+[-        ] EME…CLASSIFICATION_GRAPH_READS -
+[-        ] EME…ANALYSIS:METASHORT:MEGAHIT -
+[-        ] EME…ICANALYSIS:METASHORT:UNZIP -
+[-        ] EME…ICANALYSIS:METASHORT:QUAST -
+[-        ] EME…IS:METASHORT:ALIGN_CONTIGS -
+[-        ] EME…ALIGNMENT_CLASSIFY_CONTIGS -
+[-        ] EME…ASSIFICATION_GRAPH_CONTIGS -
+
+[-        ] EME…UT_CHECK:SAMPLESHEET_CHECK -
+[-        ] EME…LYSIS:METASHORT:FASTQC_RAW -
+[-        ] EME…YSIS:METASHORT:ALIGN_READS -
+[-        ] EME…TASHORT:ALIGNMENT_CLASSIFY -
+[-        ] EME…S:METASHORT:SAMTOOLS_STATS -
+[-        ] EME…ASHORT:SAMTOOLS_SORT_INDEX -
+[-        ] EME…RT:FASTQC_ALIGNED_FILTERED -
+[-        ] EME…ETASHORT:BEDTOOLS_BAMTOBED -
+[-        ] EME…HORT:GATK4_HAPLOTYPECALLER -
+[-        ] EME…LYSIS:METASHORT:IGVREPORTS -
+[-        ] EME…HORT:SAMTOOLS_FASTQ_MAPPED -
+[-        ] EME…CLASSIFICATION_GRAPH_READS -
+[-        ] EME…ANALYSIS:METASHORT:MEGAHIT -
+[-        ] EME…ICANALYSIS:METASHORT:UNZIP -
+[-        ] EME…ICANALYSIS:METASHORT:QUAST -
+[-        ] EME…IS:METASHORT:ALIGN_CONTIGS -
+[-        ] EME…ALIGNMENT_CLASSIFY_CONTIGS -
+[-        ] EME…ASSIFICATION_GRAPH_CONTIGS -
+[-        ] EME…ANALYSIS:METASHORT:MULTIQC -
+
+[-        ] EME…UT_CHECK:SAMPLESHEET_CHECK | 0 of 1
+[-        ] EME…LYSIS:METASHORT:FASTQC_RAW -
+[-        ] EME…YSIS:METASHORT:ALIGN_READS -
+[-        ] EME…TASHORT:ALIGNMENT_CLASSIFY -
+[-        ] EME…S:METASHORT:SAMTOOLS_STATS -
+[-        ] EME…ASHORT:SAMTOOLS_SORT_INDEX -
+[-        ] EME…RT:FASTQC_ALIGNED_FILTERED -
+[-        ] EME…ETASHORT:BEDTOOLS_BAMTOBED -
+[-        ] EME…HORT:GATK4_HAPLOTYPECALLER -
+[-        ] EME…LYSIS:METASHORT:IGVREPORTS -
+[-        ] EME…HORT:SAMTOOLS_FASTQ_MAPPED -
+[-        ] EME…CLASSIFICATION_GRAPH_READS -
+[-        ] EME…ANALYSIS:METASHORT:MEGAHIT -
+[-        ] EME…ICANALYSIS:METASHORT:UNZIP -
+[-        ] EME…ICANALYSIS:METASHORT:QUAST -
+[-        ] EME…IS:METASHORT:ALIGN_CONTIGS -
+[-        ] EME…ALIGNMENT_CLASSIFY_CONTIGS -
+[-        ] EME…ASSIFICATION_GRAPH_CONTIGS -
+[-        ] EME…ANALYSIS:METASHORT:MULTIQC -
+
+[-        ] EME…UT_CHECK:SAMPLESHEET_CHECK | 0 of 1
+[-        ] EME…LYSIS:METASHORT:FASTQC_RAW -
+[-        ] EME…YSIS:METASHORT:ALIGN_READS -
+[-        ] EME…TASHORT:ALIGNMENT_CLASSIFY -
+[-        ] EME…S:METASHORT:SAMTOOLS_STATS -
+[-        ] EME…ASHORT:SAMTOOLS_SORT_INDEX -
+[-        ] EME…RT:FASTQC_ALIGNED_FILTERED -
+[-        ] EME…ETASHORT:BEDTOOLS_BAMTOBED -
+[-        ] EME…HORT:GATK4_HAPLOTYPECALLER -
+[-        ] EME…LYSIS:METASHORT:IGVREPORTS -
+[-        ] EME…HORT:SAMTOOLS_FASTQ_MAPPED -
+[-        ] EME…CLASSIFICATION_GRAPH_READS -
+[-        ] EME…ANALYSIS:METASHORT:MEGAHIT -
+[-        ] EME…ICANALYSIS:METASHORT:UNZIP -
+[-        ] EME…ICANALYSIS:METASHORT:QUAST -
+[-        ] EME…IS:METASHORT:ALIGN_CONTIGS -
+[-        ] EME…ALIGNMENT_CLASSIFY_CONTIGS -
+[-        ] EME…ASSIFICATION_GRAPH_CONTIGS -
+[-        ] EME…ANALYSIS:METASHORT:MULTIQC -
+ERROR ~ Error executing process > 'EMEL_METAGENOMICANALYSIS:METASHORT:INPUT_CHECK:SAMPLESHEET_CHECK (ZYMO_samplesheet.csv)'
+
+Caused by:
+  Failed to submit process to grid scheduler for execution
+
+
+Command executed:
+
+  qsub -terse .command.run
+
+Command exit status:
+  5
+
+Command output:
+  qsub: Unknown option 
+  
+
+Work dir:
+  /scicomp/scratch/rtq0/nextflow/50/03aabd393edd4e3663fadf568ddd06
+
+Container:
+  /scicomp/scratch/rtq0/nextflow/singularity_cache/quay.io-biocontainers-python-3.8.3.img
+
+Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+
+ -- Check '.nextflow.log' file for details
+
+[50/03aabd] EME…ECK (ZYMO_samplesheet.csv) | 1 of 1, failed: 1
+[-        ] EME…LYSIS:METASHORT:FASTQC_RAW -
+[-        ] EME…YSIS:METASHORT:ALIGN_READS -
+[-        ] EME…TASHORT:ALIGNMENT_CLASSIFY -
+[-        ] EME…S:METASHORT:SAMTOOLS_STATS -
+[-        ] EME…ASHORT:SAMTOOLS_SORT_INDEX -
+[-        ] EME…RT:FASTQC_ALIGNED_FILTERED -
+[-        ] EME…ETASHORT:BEDTOOLS_BAMTOBED -
+[-        ] EME…HORT:GATK4_HAPLOTYPECALLER -
+[-        ] EME…LYSIS:METASHORT:IGVREPORTS -
+[-        ] EME…HORT:SAMTOOLS_FASTQ_MAPPED -
+[-        ] EME…CLASSIFICATION_GRAPH_READS -
+[-        ] EME…ANALYSIS:METASHORT:MEGAHIT -
+[-        ] EME…ICANALYSIS:METASHORT:UNZIP -
+[-        ] EME…ICANALYSIS:METASHORT:QUAST -
+[-        ] EME…IS:METASHORT:ALIGN_CONTIGS -
+[-        ] EME…ALIGNMENT_CLASSIFY_CONTIGS -
+[-        ] EME…ASSIFICATION_GRAPH_CONTIGS -
+[-        ] EME…ANALYSIS:METASHORT:MULTIQC -
+Execution cancelled -- Finishing pending tasks before exit
+-[EMEL-Metagenomics] Pipeline completed with errors-
+-[EMEL-Metagenomics] Pipeline completed with errors-
+ERROR ~ Error executing process > 'EMEL_METAGENOMICANALYSIS:METASHORT:INPUT_CHECK:SAMPLESHEET_CHECK (ZYMO_samplesheet.csv)'
+
+Caused by:
+  Failed to submit process to grid scheduler for execution
+
+
+Command executed:
+
+  qsub -terse .command.run
+
+Command exit status:
+  5
+
+Command output:
+  qsub: Unknown option 
+  
+
+Work dir:
+  /scicomp/scratch/rtq0/nextflow/50/03aabd393edd4e3663fadf568ddd06
+
+Container:
+  /scicomp/scratch/rtq0/nextflow/singularity_cache/quay.io-biocontainers-python-3.8.3.img
+
+Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+
+ -- Check '.nextflow.log' file for details
+
+[50/03aabd] EME…ECK (ZYMO_samplesheet.csv) | 1 of 1, failed: 1
+[-        ] EME…LYSIS:METASHORT:FASTQC_RAW -
+[-        ] EME…YSIS:METASHORT:ALIGN_READS -
+[-        ] EME…TASHORT:ALIGNMENT_CLASSIFY -
+[-        ] EME…S:METASHORT:SAMTOOLS_STATS -
+[-        ] EME…ASHORT:SAMTOOLS_SORT_INDEX -
+[-        ] EME…RT:FASTQC_ALIGNED_FILTERED -
+[-        ] EME…ETASHORT:BEDTOOLS_BAMTOBED -
+[-        ] EME…HORT:GATK4_HAPLOTYPECALLER -
+[-        ] EME…LYSIS:METASHORT:IGVREPORTS -
+[-        ] EME…HORT:SAMTOOLS_FASTQ_MAPPED -
+[-        ] EME…CLASSIFICATION_GRAPH_READS -
+[-        ] EME…ANALYSIS:METASHORT:MEGAHIT -
+[-        ] EME…ICANALYSIS:METASHORT:UNZIP -
+[-        ] EME…ICANALYSIS:METASHORT:QUAST -
+[-        ] EME…IS:METASHORT:ALIGN_CONTIGS -
+[-        ] EME…ALIGNMENT_CLASSIFY_CONTIGS -
+[-        ] EME…ASSIFICATION_GRAPH_CONTIGS -
+[-        ] EME…ANALYSIS:METASHORT:MULTIQC -
+Execution cancelled -- Finishing pending tasks before exit
+-[EMEL-Metagenomics] Pipeline completed with errors-
+-[EMEL-Metagenomics] Pipeline completed with errors-
+ERROR ~ Error executing process > 'EMEL_METAGENOMICANALYSIS:METASHORT:INPUT_CHECK:SAMPLESHEET_CHECK (ZYMO_samplesheet.csv)'
+
+Caused by:
+  Failed to submit process to grid scheduler for execution
+
+
+Command executed:
+
+  qsub -terse .command.run
+
+Command exit status:
+  5
+
+Command output:
+  qsub: Unknown option 
+  
+
+Work dir:
+  /scicomp/scratch/rtq0/nextflow/50/03aabd393edd4e3663fadf568ddd06
+
+Container:
+  /scicomp/scratch/rtq0/nextflow/singularity_cache/quay.io-biocontainers-python-3.8.3.img
+
+Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+
+ -- Check '.nextflow.log' file for details
+
