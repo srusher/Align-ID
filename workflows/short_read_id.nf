@@ -235,7 +235,7 @@ workflow SHORT_READ_ID {
     ALIGN_READS_MINIMAP2 (
 
         trimmed_reads,
-        [[params.minimap2_meta],[params.minimap2_index]]
+        [[params.minimap2_meta],[params.minimap2_genome_reference]]
 
     )
 

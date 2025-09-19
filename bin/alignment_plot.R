@@ -7,9 +7,8 @@ args <- commandArgs(trailingOnly = TRUE)
 
 tsv <- args[1]
 workdir <- args[2]
-mapq <- args[3]
-prefix <- args[4]
-datatype <- args[5]
+prefix <- args[3]
+datatype <- args[4]
 
 setwd(workdir)
 
@@ -26,13 +25,33 @@ df$percent_reads <- sub("^\\s+", "", df$percent_reads)
 # convert 3rd column to double
 df$percent_reads <- as.double(df$percent_reads)
 
-
 # grab the top 20 rows by total_species_count
 unique_species <- length(unique(df$species))
 if (unique_species > 20) {
 
-  top_hits <- df %>%
-  slice_max(n = (unique_species * 3), order_by = num_reads)
+  top_species <- df %>%
+  slice_max(n = 15, order_by = num_reads)
+
+  # if we want to grab the top 20 species we want to make sure we also grab all ambiguity entries of each species, even if the read count for one ambiguity level is much lower than the other
+  for (i in 1:nrow(df)) {
+
+    row <- df[i, ]
+
+    if (row$species %in% top_species$species) {
+
+      if (exists("top_hits")) {
+
+        top_hits <- rbind(top_hits, row)
+
+      } else {
+
+        top_hits <- row
+
+      }
+
+    }
+  
+  }
 
 } else {
 
@@ -82,8 +101,8 @@ ggplot_df$total_species_percent <- NA
 ggplot_df$offset <- NA
 
 # creating samll df to see which species contains the highest read percentage regardless of ambiguity
-total_count_by_species <- aggregate(num_reads ~ species, data = df, sum)
-total_percent_by_species <- aggregate(percent_reads ~ species, data = df, sum)
+total_count_by_species <- aggregate(num_reads ~ species, data = top_hits_mod, sum)
+total_percent_by_species <- aggregate(percent_reads ~ species, data = top_hits_mod, sum)
 
 # grabbing highest percent value to adjust data label positions in plot. The highest percent value will ultimately determine the scale of the y-axis, so our data label positions will be based on that
 max_percent = max(total_percent_by_species$percent_reads, na.rm = TRUE)
@@ -134,10 +153,34 @@ for (i in 1:nrow(ggplot_df)) {
 
     vertical_pos = total_percent_by_species$percent_reads[total_percent_by_species$species == row$species] - (row$percent_reads / 2)
 
-    # determines if single_genome ambiguity exists for this species; this is required to prevent a 'lenghth of zero' error in the subsequent if statement
-    if (length(single_ambiguity_offset) == 0) {
+    # determines if 'single_genome' and 'none' ambiguity classifiers exists for this species; this is required to prevent a 'length of zero' error in the subsequent if statements
+    if (length(single_ambiguity_offset) == 0 & length(none_ambiguity_percent) == 0) {
 
       vertical_pos = vertical_pos
+
+    } else if (length(single_ambiguity_offset) == 0 & length(none_ambiguity_percent) != 0) {
+
+      if (none_ambiguity_percent >= size_factor) {
+
+        vertical_pos = vertical_pos
+      
+      } else {
+
+        vertical_pos = none_ambiguity_percent + size_factor
+
+      }
+
+    } else if (length(single_ambiguity_offset) != 0 & length(none_ambiguity_percent) == 0) {
+
+        if (single_ambiguity_offset + size_factor <= vertical_pos) {
+
+          vertical_pos = vertical_pos
+        
+        } else {
+
+          vertical_pos = single_ambiguity_offset + size_factor
+
+        }
 
     } else if (single_ambiguity_offset + size_factor <= vertical_pos) {
 
@@ -178,4 +221,4 @@ plot_1 <- ggplot(ggplot_df, aes(x = species, group = ambiguity, y = percent_read
     show.legend  = FALSE
   )
 
-ggsave("plot.png", width = 14, height = 6, dpi = 150)
+ggsave("plot.png", width = 16, height = 6, dpi = 150)

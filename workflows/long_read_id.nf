@@ -72,7 +72,7 @@ include { SAMTOOLS_SORT_INDEX                             } from '../modules/loc
 include { SAMTOOLS_FASTQ as SAMTOOLS_FASTQ_MAPPED         } from '../modules/local/samtools_fastq'
 include { ALIGNMENT_CLASSIFICATION_GRAPH as ALIGNMENT_CLASSIFICATION_GRAPH_READS } from '../modules/local/alignment_classification_graph'
 
-//clearing out minimap2 queues if memory_saver mode is enabled (only required for local compute; memory allocation should generally be handled by the job scheduler when using the cluster)
+//clearing out minimap2 queues if memory_saver mode is enabled (only required for local compute; memory allocation should generally be handled by the job scheduler when submitting to the cluster)
 if (params.memory_saver) {
 
     def minimap2_queue = new File("${projectDir}/queue/minimap2")
@@ -199,7 +199,7 @@ workflow LONG_READ_ID {
     ALIGN_READS (
 
         trimmed_reads,
-        [[params.minimap2_meta],[params.minimap2_index]]
+        [[params.minimap2_meta],[params.minimap2_genome_reference]]
 
     )
 

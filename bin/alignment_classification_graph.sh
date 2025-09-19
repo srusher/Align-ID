@@ -4,11 +4,10 @@ R_CONTAINER="/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/singularity/R/ggplo
 prefix=$1
 alignment_report=$2
 rscript=$3
-mapq=$4
-data_type=$5
+data_type=$4
 
 input_tsv="$prefix-rscript-input.csv"
 
-singularity exec --bind /scicomp $R_CONTAINER Rscript $rscript $alignment_report "$(pwd)" $mapq $prefix $data_type
+singularity exec --bind /scicomp $R_CONTAINER Rscript $rscript $alignment_report "$(pwd)" $prefix $data_type
 
 mv plot.png $prefix-taxonomic-distribution-plot_mqc.png

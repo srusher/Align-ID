@@ -132,6 +132,18 @@ singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db <<EOF
 .import $seqid2taxid tax_map
 EOF
 
+# manually adding reference sequence IDs to taxonomy map if they had not already been added
+singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
+	"
+	INSERT INTO tax_map
+	SELECT ref_id, ref_id
+	FROM sam_complete
+	WHERE ref_id NOT IN (
+		SELECT seq_id
+		FROM tax_map
+	)
+	"
+
 # removing duplicate rows from seq id to tax id map file
 singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
@@ -464,6 +476,10 @@ while IFS= read -r line; do
 
 		continue
 	
+	elif [[ "$tax_id" =~ [a-zA-Z] ]]; then # if the tax_id var contains letters then it is most likely a nonstandard reference (or it wasn't included in the taxonomy map) and we don't want to try and look this up in the names.dmp file
+
+		continue
+
 	fi
 
 	# this line is grabbing the scientific name from the names.dmp taxonomy file

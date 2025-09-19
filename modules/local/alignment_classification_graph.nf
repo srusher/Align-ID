@@ -15,7 +15,7 @@ process ALIGNMENT_CLASSIFICATION_GRAPH {
 
     """
 
-    bash "${projectDir}/bin/alignment_classification_graph.sh" $prefix $alignment_report "${projectDir}/bin/alignment_plot.R" ${params.mapping_quality} ${data_type}
+    bash "${projectDir}/bin/alignment_classification_graph.sh" $prefix $alignment_report "${projectDir}/bin/alignment_plot.R" ${data_type}
 
     """
 
