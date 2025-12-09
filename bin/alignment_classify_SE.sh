@@ -186,20 +186,6 @@ singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
-	CREATE TABLE primary_unambiguous (read_id TEXT, flag INTEGER, ref_id TEXT, mapq INTEGER, as_tag TEXT, tax_id INTEGER, FOREIGN KEY (ref_id) REFERENCES tax_map (seq_id));
-	"
-
-singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
-	"
-	INSERT INTO primary_unambiguous
-	SELECT sam_complete.read_id, sam_complete.flag, sam_complete.ref_id, sam_complete.mapq, sam_complete.as_tag, tax_map.tax_id
-	FROM sam_complete
-	JOIN tax_map ON (sam_complete.ref_id = tax_map.seq_id)
-	WHERE sam_complete.tp_tag = 'tp:A:P' AND sam_complete.mapq > 0
-	"
-
-singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
-	"
 	CREATE TABLE primary_multimap (read_id TEXT, flag INTEGER, ref_id TEXT, mapq INTEGER, as_tag TEXT, tax_id INTEGER, FOREIGN KEY (ref_id) REFERENCES tax_map (seq_id));
 	"
 
@@ -237,9 +223,27 @@ singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
 	SELECT secondary_mappings.sec_read_id, secondary_mappings.sec_tax_id, COUNT(secondary_mappings.sec_tax_id), primary_multimap.tax_id
 	FROM secondary_mappings
 	JOIN primary_multimap ON (secondary_mappings.sec_read_id = primary_multimap.read_id) 
-	WHERE secondary_mappings.sec_as_tag = primary_multimap.as_tag
+	WHERE secondary_mappings.sec_as_tag = primary_multimap.as_tag or cast(substr(secondary_mappings.sec_as_tag, 6) AS INTEGER) > cast(substr(primary_multimap.as_tag, 6) AS INTEGER)
 	GROUP BY secondary_mappings.sec_read_id, secondary_mappings.sec_tax_id
-	" 
+	"
+
+singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
+	"
+	CREATE TABLE primary_unambiguous (read_id TEXT, flag INTEGER, ref_id TEXT, mapq INTEGER, as_tag TEXT, tax_id INTEGER, FOREIGN KEY (ref_id) REFERENCES tax_map (seq_id));
+	"
+
+# had to change the condition for WHERE clause - a MAPQ of 0 doesn't guarantee a secondary alignment with a >= alignment score (AS) as the primary alignment meaning that is read may not be accounted for in the ambiguous (single or multi genome) queries; so in order to grab all unambiguous primary alignments we will use the tp_tag and make sure the read_id does not appear in the primary_secondary_aggregate table
+singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
+	"
+	INSERT INTO primary_unambiguous
+	SELECT sam_complete.read_id, sam_complete.flag, sam_complete.ref_id, sam_complete.mapq, sam_complete.as_tag, tax_map.tax_id
+	FROM sam_complete
+	JOIN tax_map ON (sam_complete.ref_id = tax_map.seq_id)
+	WHERE sam_complete.tp_tag = 'tp:A:P' AND sam_complete.read_id NOT IN (
+		SELECT read_id
+		FROM primary_secondary_aggregate
+	)
+	"
 
 singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
@@ -378,10 +382,23 @@ done < "$summary_file"
 
 
 # grab all primary alignments
-singularity exec --bind /scicomp $SAMTOOLS_CONTAINER samtools view $bam | awk '$16 == "tp:A:P"' | awk '$2 != 2048 && $2 != 2064' >> $primary_all
+singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \
+	"
+    SELECT *
+    FROM sam_complete
+	WHERE tp_tag = 'tp:A:P'
+	" | sed 's/|/\t/g' >> $primary_all
 
 # grab all nonambiguous primary alignments
-singularity exec --bind /scicomp $SAMTOOLS_CONTAINER samtools view $bam | awk '$16 == "tp:A:P" && $5 > 0' | awk '$2 != 2048 && $2 != 2064' >> $primary_unambiguous
+singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db\
+	"
+    SELECT *
+    FROM sam_complete
+	WHERE tp_tag = 'tp:A:P' and read_id IN (
+		SELECT read_id
+		FROM primary_unambiguous
+	)
+	" | sed 's/|/\t/g' >> $primary_unambiguous
 
 # grab all primary ambiguous single genome hits
 singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $sam_db \

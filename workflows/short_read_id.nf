@@ -70,7 +70,6 @@ include { SAMTOOLS_STATS                                  } from '../modules/loc
 include { SAMTOOLS_SORT_INDEX                             } from '../modules/local/samtools_sort_index'
 include { SAMTOOLS_FASTQ as SAMTOOLS_FASTQ_MAPPED         } from '../modules/local/samtools_fastq'
 include { ALIGNMENT_CLASSIFICATION_GRAPH as ALIGNMENT_CLASSIFICATION_GRAPH_READS } from '../modules/local/alignment_classification_graph'
-include { BLAST_BLASTN                                     } from '../modules/local/blastn'
 
 
 /*
