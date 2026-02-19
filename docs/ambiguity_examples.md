@@ -15,18 +15,18 @@ Paired-End alignments are a bit trickier, so we'll go through each ambiguity lev
 ### Non-ambiguous Alignments
 Non-ambiguous alignments will recieve the `none` ambiguity classifier:
 
-![Non-ambiguous alignment scenarios](docs/images/ambiguity_none.jpg)
+![Non-ambiguous alignment scenarios](images/ambiguity_none.jpg)
 
 ### Single-Genome Ambiguity
 Alignments that align to multiple locations within the same refence genome or across reference genomes that belong to the same species alignments will recieve the `single-genome` ambiguity classifier:
 
-![Single-Genome ambiguous alignment scenario 1 and 2](docs/images/single_genome_ambiguity_1.jpg)
-![Single-Genome ambiguous alignment scenario 3](docs/images/single_genome_ambiguity_2.jpg)
+![Single-Genome ambiguous alignment scenario 1 and 2](images/single_genome_ambiguity_1.jpg)
+![Single-Genome ambiguous alignment scenario 3](images/single_genome_ambiguity_2.jpg)
 
 ### Multi-Genome Ambiguity
 Alignments that align to multiple locations across more than one species of reference genomes will recieve the `multi-genome` ambiguity classifier:
 
-![Multi-Genome ambiguous alignment scenario 1](docs/images/multi_genome_ambiguity_1.jpg)
-![Multi-Genome ambiguous alignment scenario 2](docs/images/multi_genome_ambiguity_2.jpg)
-![Multi-Genome ambiguous alignment scenario 3](docs/images/multi_genome_ambiguity_3.jpg)
-![Multi-Genome ambiguous alignment scenario 4](docs/images/multi_genome_ambiguity_4.jpg)
+![Multi-Genome ambiguous alignment scenario 1](images/multi_genome_ambiguity_1.jpg)
+![Multi-Genome ambiguous alignment scenario 2](images/multi_genome_ambiguity_2.jpg)
+![Multi-Genome ambiguous alignment scenario 3](images/multi_genome_ambiguity_3.jpg)
+![Multi-Genome ambiguous alignment scenario 4](images/multi_genome_ambiguity_4.jpg)
