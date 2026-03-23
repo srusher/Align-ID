@@ -48,13 +48,23 @@
 
 7. Workflow Summary ([`MultiQC`](https://github.com/MultiQC/MultiQC))
 
-## Environment
 
-This workflow uses assets and dependencies native to the CDC's SciComp environment. If you do not have access to the SciComp environment, you can request an account [`here`](https://info.biotech.cdc.gov/info/helpdesk-ticket/?category=Account%20Requests). You will also need access to the EMEL Group Working Area found here `/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/`. If you do not have access you may request read-only access [`here`](https://info.biotech.cdc.gov/info/helpdesk-ticket/?category=GWA%20/%20Lab%20Instruments%20/%20Home%20Directory)
+## Installation
 
-**Long Read Setup**
-In order to reduce GPU node usage (only two are available), lond reads should be basecalled prior to execution. There is a bash script located here: `bin\dorado-convert.sh` that is designed to take pod5 files and perform basecalling, demultiplexing, adapter trimming, and  fastq conversion (NOTE: this bash script is not embedded in the actual Align ID workflow and should be ran as a stand alone process outside of this project directory)
+1. Clone repository:
 
+```bash
+git clone https://github.com/srusher/Align-ID
+```
+
+2. Install and activate nextflow via Conda:
+
+```bash
+conda create --name nf-env bioconda::nextflow
+source activate nf-env
+```
+
+3. Install Singularity: See singularity docs for installation guide (https://docs.sylabs.io/guides/3.0/user-guide/installation.html#install-on-linux)
 
 ## Setup
 
@@ -116,12 +126,12 @@ Insert the file path to your combined fasta into this minimap2 command (minimap2
 
 Long Read Format:
 ```bash
-singularity exec --bind /scicomp /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/singularity/minimap2/minimap2%3A2.28--he4a0461_1 minimap2 -x map-ont -d all_ref_genomes.mmi all_ref_genomes.fasta
+singularity exec https://depot.galaxyproject.org/singularity/minimap2%3A2.28--he4a0461_1 minimap2 -x map-ont -d all_ref_genomes.mmi all_ref_genomes.fasta
 ```
 
 Short Read Format:
 ```bash
-singularity exec --bind /scicomp /scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/singularity/minimap2/minimap2%3A2.28--he4a0461_1 minimap2 -x sr -d all_ref_genomes.mmi all_ref_genomes.fasta
+singularity exec https://depot.galaxyproject.org/singularity/minimap2%3A2.28--he4a0461_1 minimap2 -x sr -d all_ref_genomes.mmi all_ref_genomes.fasta
 ```
 
 Note that the `-d` flag with a `.mmi` file extension represents the output index file path.
@@ -150,7 +160,7 @@ bash ./bin/add_fasta_to_seq_map.sh '/path/to/seqid2taxid.map' '/path/to/ref_fast
 ```
 
 If you are planning on mapping your sample to multiple custom reference genomes from different species then you will need to run this script once per reference fasta. 
-NOTE: This step needs to be performed on individual fasta files. Do not run this script on a concatentated fasta unless each individual fasta originated from the same species
+NOTE: This step needs to be performed on individual fasta files. Do not run this script on a concatentated fasta unless each individual contig originated from the same species
 
 
 ## Usage
