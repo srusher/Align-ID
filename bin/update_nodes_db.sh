@@ -1,14 +1,16 @@
 #!/bin/bash
-SQLITE3_CONTAINER="/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/singularity/sqlite3/sqlite%3A3"
+SQLITE3_CONTAINER="https://depot.galaxyproject.org/singularity/sqlite%3A3"
 
 local_nodes_db=$1
 nodes=$2
 my_tax_ids=$3
 
+bind_dir="/"$(echo $(pwd) | cut -d '/' -f2)
+
 
 while IFS= read -r id; do #iterating through tax ids listed in the tax id input file
 
-    data=$(singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $local_nodes_db "SELECT parent_id FROM TAX_IDS WHERE parent_id = "$id"")
+    data=$(singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $local_nodes_db "SELECT parent_id FROM TAX_IDS WHERE parent_id = "$id"")
 
 
     if [[ -n $data ]]; then
@@ -17,7 +19,7 @@ while IFS= read -r id; do #iterating through tax ids listed in the tax id input 
 
     fi
 
-    singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $local_nodes_db "INSERT INTO TAX_IDS (parent_id, child_ids) VALUES ("$id", '');"
+    singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $local_nodes_db "INSERT INTO TAX_IDS (parent_id, child_ids) VALUES ("$id", '');"
 
     parent_id="$id"
 
@@ -47,14 +49,14 @@ while IFS= read -r id; do #iterating through tax ids listed in the tax id input 
                     if [[ $count_other -eq 0 ]]; then
 
                         # this should only execute once per specified parent tax id
-                        singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $local_nodes_db "UPDATE TAX_IDS SET child_ids = "$x" WHERE parent_id = "$parent_id";"
+                        singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $local_nodes_db "UPDATE TAX_IDS SET child_ids = "$x" WHERE parent_id = "$parent_id";"
                         ((count_other++))
 
                         tax_array+=("$x") #appending child tax ids to array to use in
                     
                     else
 
-                        singularity exec --bind /scicomp $SQLITE3_CONTAINER sqlite3 $local_nodes_db "UPDATE TAX_IDS SET child_ids = child_ids || ',' || "$x" WHERE parent_id = "$parent_id";"
+                        singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $local_nodes_db "UPDATE TAX_IDS SET child_ids = child_ids || ',' || "$x" WHERE parent_id = "$parent_id";"
 
                         tax_array+=("$x") #appending child tax ids to array to use in
 
