@@ -64,13 +64,14 @@ include { NANOPLOT as NANOPLOT_RAW                        } from '../modules/loc
 include { NANOPLOT as NANOPLOT_TRIMMED                    } from '../modules/local/nanoplot'
 include { NANOPLOT as NANOPLOT_ALIGNMENT_TAXON_FILTERED   } from '../modules/local/nanoplot'
 include { MINIMAP2_ALIGN as ALIGN_READS                   } from '../modules/local/minimap2_long'
+include { ALIGNMENT_CLASSIFY                              } from '../modules/local/alignment_classify'
+include { ALIGNMENT_CLASSIFICATION_GRAPH as ALIGNMENT_CLASSIFICATION_GRAPH_READS } from '../modules/local/alignment_classification_graph'
+include { FILTER_ALIGNMENTS_BY_ID                         } from '../modules/local/filter_alignments_by_id'
+include { BLAST_UNMAPPED_READS                            } from '../modules/local/blast_unmapped_reads'
 include { SAMTOOLS_STATS                                  } from '../modules/local/samtools_stats'
 include { SAMTOOLS_FASTQ as SAMTOOLS_FASTQ_UNMAPPED       } from '../modules/local/samtools_fastq'
-include { ALIGNMENT_CLASSIFY                              } from '../modules/local/alignment_classify'
-include { BLAST_UNMAPPED_READS                            } from '../modules/local/blast_unmapped_reads'
 include { SAMTOOLS_SORT_INDEX                             } from '../modules/local/samtools_sort_index'
 include { SAMTOOLS_FASTQ as SAMTOOLS_FASTQ_MAPPED         } from '../modules/local/samtools_fastq'
-include { ALIGNMENT_CLASSIFICATION_GRAPH as ALIGNMENT_CLASSIFICATION_GRAPH_READS } from '../modules/local/alignment_classification_graph'
 
 //clearing out minimap2 queues if memory_saver mode is enabled (only required for local compute; memory allocation should generally be handled by the job scheduler when submitting to the cluster)
 if (params.memory_saver) {
@@ -99,7 +100,7 @@ ch_multiqc_files = Channel.empty()
 
 workflow LONG_READ_ID {
 
-    if (params.filter_alignment_by_id) {
+    if (!params.skip_filter_alignment_by_id && params.include_children) {
 
         UPDATE_NODES_DB (
 
@@ -207,23 +208,39 @@ workflow LONG_READ_ID {
     ALIGNMENT_CLASSIFY (
 
         ALIGN_READS.out.bam,
-        params.seqid2taxid_map,
-        params.filter_alignment_by_id,
-        params.my_tax_ids,
-        params.include_children
+        params.seqid2taxid_map
 
     )
 
-    BLAST_UNMAPPED_READS (
+    ALIGNMENT_CLASSIFICATION_GRAPH_READS (
 
-        ALIGNMENT_CLASSIFY.out.unmapped_bam,
-        params.blast_db
+        ALIGNMENT_CLASSIFY.out.summary_tsv,
+        "Read"
 
     )
 
-    if (params.filter_alignment_by_id) {
+    if (!params.skip_blast_unmapped) {
 
-        alignment_classified_bam = ALIGNMENT_CLASSIFY.out.classified_plus_filtered_bam
+        BLAST_UNMAPPED_READS (
+
+            ALIGNMENT_CLASSIFY.out.unmapped_bam,
+            params.blast_db
+
+        )
+    }
+
+    if (!params.skip_filter_alignment_by_id) {
+
+        FILTER_ALIGNMENTS_BY_ID (
+
+            ALIGNMENT_CLASSIFY.out.primary_all.join(ALIGNMENT_CLASSIFY.out.sam_db),
+            params.seqid2taxid_map,
+            params.my_tax_ids,
+            params.include_children
+
+        )
+
+        alignment_classified_bam = FILTER_ALIGNMENTS_BY_ID.out.tax_filtered_bam
 
     } else {
 
@@ -270,13 +287,6 @@ workflow LONG_READ_ID {
     NANOPLOT_ALIGNMENT_TAXON_FILTERED (
 
         filtered_reads
-
-    )
-
-    ALIGNMENT_CLASSIFICATION_GRAPH_READS (
-
-        ALIGNMENT_CLASSIFY.out.summary_tsv,
-        "Read"
 
     )
 

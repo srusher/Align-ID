@@ -3,7 +3,7 @@ process SEQTK_LEN_TRIM {
     label 'process_low'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        '/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/singularity/seqtk/seqtk%3A1.4--he4a0461_2' :
+        '/scicomp/groups-pure/WDPB/EMEL/singularity/seqtk/seqtk%3A1.4--he4a0461_2' :
         'https://depot.galaxyproject.org/singularity/seqtk%3A1.4--he4a0461_2' }"
 
     input:

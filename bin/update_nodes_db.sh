@@ -7,12 +7,20 @@ my_tax_ids=$3
 
 bind_dir="/"$(echo $(pwd) | cut -d '/' -f2)
 
+# if the DB does not exist, have sqlite create the DB and the TAX_IDS table
+singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $local_nodes_db \
+"
+CREATE TABLE IF NOT EXISTS TAX_IDS (
+    parent_id  TEXT,
+    child_ids  TEXT
+);
+"
 
-while IFS= read -r id; do #iterating through tax ids listed in the tax id input file
+while IFS= read -r || [[ -n "$id" ]]; do #iterating through tax ids listed in the tax id input file
 
     data=$(singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $local_nodes_db "SELECT parent_id FROM TAX_IDS WHERE parent_id = "$id"")
 
-
+    # if this parent ID entry already exists in the DB then go to the next one
     if [[ -n $data ]]; then
 
         continue
@@ -82,4 +90,5 @@ while IFS= read -r id; do #iterating through tax ids listed in the tax id input 
 
 done < "$my_tax_ids"
 
+# create placeholder output text file that tells nextflow to resume the workflow
 touch complete.txt

@@ -10,3 +10,5 @@ testing*
 scratch/
 rtq0.config
 temp/
+assets/taxonomy/*
+!.gitkeep

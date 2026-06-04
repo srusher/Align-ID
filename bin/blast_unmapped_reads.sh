@@ -23,7 +23,7 @@ for i in $random_fasta_ids; do
 
 done
 
-BLASTDB=/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/taxonomy
+BLASTDB=/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/taxonomy
 blast_args="6 qseqid qstart qend sseqid sstart send pident length mismatch evalue bitscore qcovhsp qcovs sacc stitle staxids"
 
 singularity exec --bind $bind_dir $BLAST_CONTAINER blastn \

@@ -66,6 +66,8 @@ source activate nf-env
 
 3. Install Singularity: See singularity docs for installation guide (https://docs.sylabs.io/guides/3.0/user-guide/installation.html#install-on-linux)
 
+4. Singularity containers used in this workflow are pulled from https://depot.galaxyproject.org/singularity/; ensure you have a stable internet connection. These containers generally only need to be pulled once as singularity will cache them for future use
+
 ## Setup
 
 First, prepare a samplesheet with your input fastq data that looks as follows:
@@ -76,8 +78,8 @@ First, prepare a samplesheet with your input fastq data that looks as follows:
 
 ```csv
 sample,fastq_long
-SAMPLE_1,/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/long-reads/sample1-long-read-ont.fastq.gz
-SAMPLE_2,/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/long-reads/sample2-long-read-ont.fastq.gz
+SAMPLE_1,/scicomp/groups-pure/WDPB/EMEL/long-reads/sample1-long-read-ont.fastq.gz
+SAMPLE_2,/scicomp/groups-pure/WDPB/EMEL/long-reads/sample2-long-read-ont.fastq.gz
 ```
 
 The top row is the header row ("sample,fastq_long") and should never be altered. Each row below the header, represents a fastq file with a unique identifier in the "sample" column (SAMPLE_1 and SAMPLE_2 in the example above). Each fastq file needs to be gzipped/compressed to prevent validation errors from occuring at the initialization of the pipeline
@@ -116,13 +118,13 @@ Now open the config file with your text editor of choice and make the appropriat
 
 **Reference Genome and Index**
 
-Align-ID needs a minimap index of the entire set of reference fastas you intend to map your reads to. To generate this index you'll want to first, concatenate all reference genome fastas into a single file:
+Align-ID needs a single FASTA file or minimap index of the entire set of reference fastas you intend to map your reads to. Regardless of whether you intend to use an index or a FASTA, you'll want to first concatenate all reference genomes into a single file:
 
 ```bash
 cat ref_genome_1.fasta ref_genome_2.fasta > all_ref_genomes.fasta
 ```
 
-Insert the file path to your combined fasta into this minimap2 command (minimap2 singularity container included in command):
+If you a have an incredibly large reference data set, you'll want to index it first to cut down on runtime (otherwise the workflow will generate the index for every sample set, every time it's ran). For smaller reference genomes, the indexing step is trivial and can be skipped if desired. Insert the file path to your combined fasta into this minimap2 command (minimap2 singularity container included in command):
 
 Long Read Format:
 ```bash
@@ -138,9 +140,32 @@ Note that the `-d` flag with a `.mmi` file extension represents the output index
 
 Once you've created your minimap2 index, go into your configuration file(s) and update the `minimap2_index` parameter with the file path to your new minimap2 index
 
-**Taxonomy Map**
+**Taxonomy Assets**
 
-This pipeline uses a sequence ID to taxonomic ID mapping file to assign taxonomy. When a read maps to a reference sequence, the algorithm uses this taxonomy file to look up the tax ID associated with that reference sequence. The tax ID map is formatted with the `sequence ID` in the first column and the `tax ID` in the second column:
+Align-ID utilizes taxonomy assets found on NCBI's FTP server (https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/). The helper script `./bin/fetch_taxonomy.sh` will retrieve all necessary files and drop them into the `./assets/taxonomy/` directory. To run the script, use the following command (this requires a stable internet connection):
+
+```bash
+bash ./bin/fetch_taxonomy.sh
+```
+
+When dealing with metagenomic datasets, strain level classifications can often result in noisy taxonomic profiles. To denoise the results, we can replace all strain level and below taxonomic IDs with their parent species taxonomic ID in the `seqid2taxid.map` mapping file using the following command:
+
+```bash
+bash ./bin/fetch_taxonomy.sh no-strain
+```
+
+There's a lot of data being retrieved and processed during this step, so it may take around 30 minutes from start to finish.
+
+If the script runs correctly, there should be 3 files (4 if you run the script with the `no-strain` parameter) in the `./assets/taxonomy/` directory:
+
+```
+names.dmp
+nodes.dmp
+seqid2taxid.map
+seqid2taxid_no-strain.map
+```
+
+When a read maps to a reference sequence, the algorithm uses the `seqid2taxid.map` file to look up the tax ID associated with that reference sequence. The tax ID map is formatted with the `sequence ID` in the first column and the `tax ID` in the second column:
 
 ```tsv
 AP025345.1	5098
@@ -153,7 +178,7 @@ This is just a snippet of the mapping file. The full mapping file assigned to th
 
 **Custom Reference Genomes and Taxonomy**
 
-If you are using reference genomes that are not in RefSeq you will need to manually add the sequence/accession IDs to the taxonomy map. There is a helper script `bin/add_fasta_to_seq_map.sh` that can assist you in adding a reference fasta of one species into the taxonomy map. The script expects a path to an existing or new seqid2taxid mapping file, one reference fasta comprised of contigs from a single species, and the taxonomic ID of that species:
+If you are using reference genomes that are not in RefSeq you will need to manually add the sequence/accession IDs to the taxonomy map. There is a helper script `./bin/add_fasta_to_seq_map.sh` that can assist you in adding a reference fasta of one species into the taxonomy map. This means that the contig / sequence name will be stored as the sequence ID and the taxonomic ID you provide will be stored as the tax ID. The script expects a path to an existing or new seqid2taxid mapping file, one reference fasta comprised of contigs from a single species, and the taxonomic ID of that species:
 
 ```bash
 bash ./bin/add_fasta_to_seq_map.sh '/path/to/seqid2taxid.map' '/path/to/ref_fasta' species_tax_ID
@@ -259,27 +284,28 @@ Parameters for the long read and short read analysis pipelines are located in `.
 | `--skip_bbmap_dedup` | boolean | false |
 | `--skip_assembly` | boolean | true |
 | `--skip_binning` | boolean | true |
-| `--skip_blast` | boolean | true |
+| `--skip_blast_unmapped` | boolean | true |
+| `--skip_filter_alignment_by_id` | boolean | true |
 | **BBmap Parameters**|            |            |
 | `--num_subsamples` | integer | 1000 |
 | **Minimap2 Parameters** |            |            |
 | `--minimap2_meta` | string | "all-genomes" |
 | `--split_prefix` | boolean | false |
 | **Alignment Classification Parameters** |            |            |
-| `--seqid2taxid_map` | string | "/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/seqid2taxid_no-strain.map" |
+| `--seqid2taxid_map` | string | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/seqid2taxid_no-strain.map" |
 | `--filter_alignment_by_id` | boolean | false |
 | `--my_tax_ids` | string | "./assets/tax_ids_acanth-verm-naegleria.txt" |
 | `--include_children` | boolean | false |
-| `--ncbi_taxonomy_nodes` | string | "/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/nodes.dmp" |
-| `--ncbi_taxonomy_names` | string | "/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/names.dmp" |
-| `--local_nodes_db` | string | "/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Reference_Databases/taxonomy/nodes_sqlite3.db" |
+| `--ncbi_taxonomy_nodes` | string | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/nodes.dmp" |
+| `--ncbi_taxonomy_names` | string | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/names.dmp" |
+| `--local_nodes_db` | string | "/scicomp/groups-pure/WDPB/EMEL/Reference_Databases/taxonomy/nodes_sqlite3.db" |
 | `--mapping_quality` | integer | 0 |
 | `--non_standard_reference` | boolean | false |
 | `--use_tmux_multiprocessing` | boolean | true |
 | **BLAST Parameters** |            |            |
 | `--use_blast_standard` | boolean | false |
 | `--blast_standard_db` | string | "/scicomp/reference/ncbi-blast-databases/nt" |
-| `--blast_db` | string | "/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/arch-bact-fung-hum-amoeba_refseq/arch-bact-fung-hum-amoeba_refseq" |
+| `--blast_db` | string | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/arch-bact-fung-hum-amoeba_refseq/arch-bact-fung-hum-amoeba_refseq" |
 | `--blast_evalue` | string | "1e-10" |
 | `--blast_perc_identity` | string | "90" |
 | `--blast_target_seqs` | string | "5" |
@@ -296,7 +322,7 @@ Parameters for the long read and short read analysis pipelines are located in `.
 | `--chopper_min_len` | integer | 1000 |
 | `--chopper_max_len` | integer | 2147483647 |
 | **Minimap2 Parameters** |            |            |
-| `--minimap2_index` | string | '/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/long-read/ATL_gene.mmi' |
+| `--minimap2_index` | string | '/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/long-read/ATL_gene.mmi' |
 | `--minimap2_mismatch_penalty` | integer | 4 |
 
 
@@ -313,7 +339,7 @@ Parameters for the long read and short read analysis pipelines are located in `.
 | `--fastp_params` | string | "" |
 | `--adapter_auto_detect` | boolean | false |
 | **Minimap2 Parameters** |            |            |
-| `--minimap2_index` | string | '/scicomp/groups-pure/OID/NCEZID/DFWED/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/short-read/ZYMO.mmi' |
+| `--minimap2_index` | string | '/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/short-read/ZYMO.mmi' |
 | `--minimap2_mismatch_penalty` | integer | 8 |
 
 
@@ -331,9 +357,18 @@ This pipeline uses code and infrastructure developed and maintained by the [nf-c
 >
 > _Nat Biotechnol._ 2020 Feb 13. doi: [10.1038/s41587-020-0439-x](https://dx.doi.org/10.1038/s41587-020-0439-x).
 
-## CDC Metadata
+## SHARE IT Act Metadata
 
-Org: Division of Foodborne Waterborne and Environmental Diseases, WDPB
-Contact Email: ncezid_shareit@cdc.gov
-Exemption: exemptByAgencySystem
-Exemption Justification: Contains server names and file paths to advanced molecular detection scripts, algorithms, workflows and datasets used by the waterborne disease prevention branch for surveillance and outbreak investigations
+Organization: CDC/NCEZID/DFWED/WDPB
+
+Contact email: ncezid_shareit@cdc.gov,  rtq0@cdc.gov
+
+Contract#: 
+
+Description: Align-ID is a bioinformatics workflow designed to generate taxonomic profiles from environmental samples sequenced by Oxford Nanopore and Illumina instruments using a competitive alignment approach.
+
+Languages: Python, R, SQL, Other
+
+Exemption: 
+
+Exemption Justification: 

@@ -7,52 +7,11 @@ bind_dir="/"$(echo $(pwd) | cut -d '/' -f2)
 prefix=$1
 bam=$2
 seqid2taxid=$3
-filter_alignment_by_id=$4
-my_tax_ids=$5
-include_children=$6
-nodes=$7
-taxa_names=$8
-project_dir=$9
-nodes_sqlite=${10}
-non_standard_reference=${11}
-mapq=${12}
-single_end=${13}
-
-# Determining child nodes based on parent tax ID provided
-if [[ "$filter_alignment_by_id" == "true" && "$include_children" == "true" ]]; then
-
-    echo "Collecting all children tax ids from SQL database"
-
-    >"$prefix-parent_and_child_ids.txt"
-
-    for i in $(cat $my_tax_ids); do
-
-        data=$(singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $nodes_sqlite "SELECT * FROM TAX_IDS WHERE parent_id = "$i"")
-
-        parent_id="$i"        
-        echo $parent_id >> $prefix-parent_and_child_ids.txt
-
-        if [[ -n $data ]]; then
-
-            child_ids=$(echo $data | cut -d '|' -f3 | sed 's/,/ /g' )
-
-            for i in $child_ids; do
-
-                echo $i >> $prefix-parent_and_child_ids.txt
-            
-            done
-        
-        fi
-
-    done
-
-    tax_ids_i_want="$prefix-parent_and_child_ids.txt"
-
-else
-
-    tax_ids_i_want="placeholder"
-
-fi
+taxa_names=$4
+project_dir=$5
+non_standard_reference=$6
+mapq=$7
+single_end=$8
 
 # if a sam file was used as input, we need to convert it to bam format first
 if [[ $bam == *".sam" ]]; then
@@ -86,14 +45,6 @@ singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view $bam > "$pre
 complete_sam=$prefix-complete.sam
 
 
-if [[ "$filter_alignment_by_id" == "true" ]]; then
-
-    tax_filtered_sam="$prefix-tax-filtered.sam"
-    singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > "$tax_filtered_sam" #printing bam headers to output sam file
-
-fi
-
-
 #############################################################################################
 ###                                 SAM Parsing Section                                  ####
 #############################################################################################
@@ -103,12 +54,14 @@ trimmed_sam="$prefix-trimmed.sam"
 
 rm -f $sam_db
 
-singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view $bam | awk '$16 == "tp:A:P" || $16 == "tp:A:S" || $2 == 165 || $2 == 101 || $2 == 133 || $2 == 77 || $2 == 141 || $2 == 69' | awk '$2 < 2000' | sed 's|"|\\"|g' | awk -v OFS='\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16}' > $trimmed_sam
+# trimming SAM file for entries we want, the 'sed' line will escape any rogue double quotes ["] in the phred score - if we don't do this, SQLite won't be able to import the SAM file
+singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view $bam | awk '$16 == "tp:A:P" || $16 == "tp:A:S" || $2 == 4' | awk '$2 != 2048 && $2 != 2064' | sed 's|"|\\"|g' | awk -v OFS='\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16}' > $trimmed_sam
+
 
 singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
-	CREATE TABLE sam_complete (read_id TEXT, flag INTEGER, ref_id TEXT, left_most_position INTEGER, mapq INTEGER, cigar TEXT, r_next TEXT, p_next TEXT, t_length TEXT, sequence TEXT, phred TEXT, nm_tag TEXT, ms_tag TEXT, as_tag TEXT, tp_tag TEXT);
-	"
+	CREATE TABLE sam_complete (read_id TEXT, flag INTEGER, ref_id TEXT, left_most_position INTEGER, mapq INTEGER, cigar TEXT, r_next TEXT, p_next INTEGER, t_length TEXT, sequence TEXT, phred BLOB, nm_tag TEXT, ms_tag TEXT, as_tag TEXT, tp_tag TEXT);
+"
 
 singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db <<EOF
 .mode tabs
@@ -166,7 +119,7 @@ singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
 	INSERT INTO total_read_pairs
 	SELECT COUNT(read_id) / 2
-	FROM sam_complete
+	FROM sam_complete2
 	WHERE tp_tag != 'tp:A:S'
 	"
 
@@ -462,7 +415,7 @@ singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 count=0
 
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n "$line" ]]; do
 
 	#skipping header line
 	if [ $count -lt 1 ]; then
@@ -550,17 +503,6 @@ singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separator
 #############################################################################################
 #############################################################################################
 #############################################################################################
-
-
-if [[ "$filter_alignment_by_id" == "true" ]]; then
-
-    #converting sam file into bam file
-    singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -S -b $tax_filtered_sam > $prefix-classified-plus-filtered.bam
-
-    #sorting BAM file
-    singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-classified-plus-filtered.bam > $prefix-classified-plus-filtered-sorted.bam
-
-fi
 
 
 singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_all > $prefix-primary-all.bam

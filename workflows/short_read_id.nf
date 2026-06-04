@@ -65,6 +65,7 @@ include { BBMAP_BBMERGE                                   } from '../modules/loc
 include { FASTP                                           } from '../modules/local/fastp'
 include { MINIMAP2_ALIGN as ALIGN_READS_MINIMAP2          } from '../modules/local/minimap2_short'
 include { ALIGNMENT_CLASSIFY                              } from '../modules/local/alignment_classify'
+include { FILTER_ALIGNMENTS_BY_ID                         } from '../modules/local/filter_alignments_by_id'
 include { BLAST_UNMAPPED_READS                            } from '../modules/local/blast_unmapped_reads'
 include { SAMTOOLS_STATS                                  } from '../modules/local/samtools_stats'
 include { SAMTOOLS_SORT_INDEX                             } from '../modules/local/samtools_sort_index'
@@ -108,7 +109,7 @@ ch_multiqc_files = Channel.empty()
 
 workflow SHORT_READ_ID {
 
-    if (!params.skip_alignment_based_filtering && params.filter_alignment_by_id) {
+    if (!params.skip_filter_alignment_by_id && params.include_children) {
 
         UPDATE_NODES_DB (
 
@@ -243,10 +244,7 @@ workflow SHORT_READ_ID {
     ALIGNMENT_CLASSIFY (
 
         aligner_bam_ch,
-        params.seqid2taxid_map,
-        params.filter_alignment_by_id,
-        params.my_tax_ids,
-        params.include_children
+        params.seqid2taxid_map
 
     )
 
@@ -259,9 +257,18 @@ workflow SHORT_READ_ID {
 
     }
 
-    if (params.filter_alignment_by_id) {
+    if (!params.skip_filter_alignment_by_id) {
 
-        alignment_classified_bam = ALIGNMENT_CLASSIFY.out.classified_plus_filtered_bam
+        FILTER_ALIGNMENTS_BY_ID (
+
+            ALIGNMENT_CLASSIFY.out.primary_all.join(ALIGNMENT_CLASSIFY.out.sam_db),
+            params.seqid2taxid_map,
+            params.my_tax_ids,
+            params.include_children
+
+        )
+
+        alignment_classified_bam = FILTER_ALIGNMENTS_BY_ID.out.tax_filtered_bam
 
     } else {
 
