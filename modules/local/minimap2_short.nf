@@ -12,9 +12,6 @@ process MINIMAP2_ALIGN {
     input:
     tuple val(meta), path(reads)
     tuple val(meta2), path(reference)
-    val bam_format
-    val cigar_paf_format
-    val cigar_bam
 
     output:
     tuple val(meta), path("*.paf"), optional: true, emit: paf
@@ -52,19 +49,9 @@ process MINIMAP2_ALIGN {
     fi
 
 
-    if [[ ${reference} == *".mmi" ]]; then
-
-        minimap2 \\
-            $args -a ${reference} ${reads} \\
-            $bam_output
-
-    else
-
-        minimap2 \\
-            $args -ax ${reference} ${reads} \\
-            $bam_output
-
-    fi
+    minimap2 \\
+        $args -a ${reference} ${reads} \\
+        $bam_output
 
 
     cat <<-END_VERSIONS > versions.yml

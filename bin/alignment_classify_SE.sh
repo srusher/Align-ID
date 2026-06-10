@@ -9,9 +9,8 @@ bam=$2
 seqid2taxid=$3
 taxa_names=$4
 project_dir=$5
-non_standard_reference=$6
-mapq=$7
-single_end=$8
+mapq=$6
+single_end=$7
 
 # if a sam file was used as input, we need to convert it to bam format first
 if [[ $bam == *".sam" ]]; then
@@ -35,16 +34,13 @@ singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam >
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $primary_unambiguous
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $primary_ambiguous_single_genome
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $primary_ambiguous_multi_genome
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $unmapped
 
 echo "Converting BAM to SAM with no headers"
 
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view $bam > "$prefix-complete.sam" #converting bam to sam for easier parsing in the loop below
 
 complete_sam=$prefix-complete.sam
-
-# grabbing all unmapped reads
-singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -f 4 -h $bam > "$prefix-unmapped.sam"
-singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 8 -S -b "$prefix-unmapped.sam" > "$prefix-unmapped.bam"
 
 
 #############################################################################################
@@ -380,31 +376,50 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separa
 	) 
 	" | sed 's/!##########!/\t/g' >> $primary_ambiguous_multi_genome
 
+# grab all unmapped reads - unmapped reads will often contain empty aux fields so we need to remove trailing tab characters from the SQL query
+singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separator '!##########!'" \
+	"
+    SELECT *
+    FROM sam_complete
+	WHERE read_id IN (
+		SELECT read_id
+		FROM unmapped
+	) 
+	" | sed 's/!##########!/\t/g' | sed 's/\t*$//' >> $unmapped
 
 #############################################################################################
 #############################################################################################
 #############################################################################################
 
 
+echo "Formatting all primary output BAM file"
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_all > $prefix-primary-all.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary-all.bam > $prefix-primary-all-sorted.bam
 rm -f $prefix-primary-all.bam
 
+echo "Formatting primary unambiguous single genome output BAM file"
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_unambiguous > $prefix-primary-unambiguous.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary-unambiguous.bam > $prefix-primary-unambiguous-sorted.bam
 rm -f $prefix-primary-unambiguous.bam
 
+echo "Formatting primary ambiguous single genome output BAM file"
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_ambiguous_single_genome > $prefix-primary_ambiguous_single_genome.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary_ambiguous_single_genome.bam > $prefix-primary_ambiguous_single_genome-sorted.bam
 rm -f $prefix-primary_ambiguous_single_genome.bam
 
+echo "Formatting primary ambiguous multi genome output BAM file"
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_ambiguous_multi_genome > $prefix-primary_ambiguous_multi_genome.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary_ambiguous_multi_genome.bam > $prefix-primary_ambiguous_multi_genome-sorted.bam
 rm -f $prefix-primary_ambiguous_multi_genome.bam
+
+echo "Formatting Unmapped output BAM file"
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $unmapped > $prefix-unmapped.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-unmapped.bam > $prefix-unmapped-sorted.bam
+rm -f $prefix-unmapped.bam
 
 # cleaning up temporary files
 rm -f $prefix-chunk_*
 rm -f $prefix-part-* 
 rm -f sam_chunk*
-# rm -f *.sam
+rm -f *.sam
 rm -f $prefix-ambig.*

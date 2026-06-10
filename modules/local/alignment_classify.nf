@@ -24,7 +24,7 @@ process ALIGNMENT_CLASSIFY {
     
         """
 
-        bash "${projectDir}/bin/alignment_classify_SE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.non_standard_reference} ${params.mapping_quality} ${meta.single_end}
+        bash "${projectDir}/bin/alignment_classify_SE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.mapping_quality} ${meta.single_end}
 
         """
 
@@ -33,11 +33,11 @@ process ALIGNMENT_CLASSIFY {
         """
         if [ ${meta.single_end} == 'true' ]; then
 
-            bash "${projectDir}/bin/alignment_classify_SE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.non_standard_reference} ${params.mapping_quality} ${meta.single_end} 
+            bash "${projectDir}/bin/alignment_classify_SE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.mapping_quality} ${meta.single_end} 
 
         else
 
-            bash "${projectDir}/bin/alignment_classify_PE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.non_standard_reference} ${params.mapping_quality} ${meta.single_end} 
+            bash "${projectDir}/bin/alignment_classify_PE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.mapping_quality} ${meta.single_end} 
 
         fi
 
