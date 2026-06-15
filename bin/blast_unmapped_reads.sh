@@ -6,10 +6,11 @@ bind_dir="/"$(echo $(pwd) | cut -d '/' -f2)
 
 prefix=$1
 bam=$2
-blastdb=$3
-blast_evalue=$4
-blast_perc_identity=$5
-blast_target_seqs=$6
+blast_db=$3
+blast_tax_db=$4
+blast_evalue=$5
+blast_perc_identity=$6
+blast_target_seqs=$7
 
 singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools fasta $bam > $prefix-unmapped.fasta
 
@@ -23,11 +24,11 @@ for i in $random_fasta_ids; do
 
 done
 
-BLASTDB=/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/taxonomy
+BLASTDB=$blast_tax_db
 blast_args="6 qseqid qstart qend sseqid sstart send pident length mismatch evalue bitscore qcovhsp qcovs sacc stitle staxids"
 
 singularity exec --bind $bind_dir $BLAST_CONTAINER blastn \
-    -db "$blastdb" \
+    -db "$blast_db" \
     -query $prefix-unmapped-subsample.fasta \
     -outfmt "$blast_args" \
     -num_threads 16 \

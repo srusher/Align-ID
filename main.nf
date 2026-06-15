@@ -37,21 +37,22 @@ WorkflowMain.initialise(workflow, params, log)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { LONG_READ_ID  } from './workflows/long_read_id'
-include { SHORT_READ_ID } from './workflows/short_read_id'
+// include { LONG_READ_ID  } from './workflows/long_read_id'
+// include { SHORT_READ_ID } from './workflows/short_read_id'
+include { ALIGN_ID } from './workflows/align_id'
 
 //
 // WORKFLOW: Run main emel/longreadanalysis analysis pipeline
 //
-workflow ALIGN_ID {
+workflow MAIN_ALIGN_ID {
 
     if (params.workflow == "long-read") {
 
-        LONG_READ_ID ()
+        ALIGN_ID ()
 
     } else if (params.workflow == "short-read") {
 
-        SHORT_READ_ID ()
+        ALIGN_ID ()
 
     } else {
 

@@ -31,7 +31,7 @@ process BBMAP_REFORMAT {
     else
 
         reformat.sh in1=${fastq[0]} in2=${fastq[1]} \
-            out1=${prefix}_subsample-${num_subsamples}_R1.fastq out2=${prefix}_subsample-${num_subsamples}_R2.fastq\
+            out1=${prefix}_subsample-${num_subsamples}_R1.fastq out2=${prefix}_subsample-${num_subsamples}_R2.fastq \
             samplereadstarget=${num_subsamples} \
             sampleseed=13
 

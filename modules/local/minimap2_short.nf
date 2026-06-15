@@ -1,4 +1,4 @@
-process MINIMAP2_ALIGN {
+process ALIGN_SHORT_READS_MINIMAP2 {
     tag "$meta.id"
     label 'process_medium'
     errorStrategy 'ignore'
@@ -50,7 +50,7 @@ process MINIMAP2_ALIGN {
 
 
     minimap2 \\
-        $args -a ${reference} ${reads} \\
+        --sr $args -a ${reference} ${reads} \\
         $bam_output
 
 

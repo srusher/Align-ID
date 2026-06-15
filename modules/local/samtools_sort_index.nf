@@ -9,7 +9,6 @@ process SAMTOOLS_SORT_INDEX {
 
     input:
     tuple val(meta), path(bam)
-    val(interleave)
 
     output:
     tuple val(meta), path("*sorted.bam")                              , optional:true, emit: bam

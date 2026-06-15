@@ -1,4 +1,4 @@
-process MINIMAP2_ALIGN {
+process ALIGN_LONG_READS_MINIMAP2  {
     tag "$meta.id"
     label 'process_high'
     errorStrategy 'ignore'

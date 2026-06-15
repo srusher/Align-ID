@@ -9,7 +9,7 @@ process ALIGNMENT_CLASSIFY {
 
 
     output:
-    tuple val(meta), path('*unmapped.bam') , optional:true, emit: unmapped_bam
+    tuple val(meta), path('*unmapped-sorted.bam') , optional:true, emit: unmapped_bam
     tuple val(meta), path('*summary.tsv') , optional:true, emit: summary_tsv
     tuple val(meta), path('*primary-all-sorted.bam') , optional:true, emit: primary_all
     tuple val(meta), path('*primary_unambiguous-sorted.bam') , optional:true, emit: primary_unambiguous

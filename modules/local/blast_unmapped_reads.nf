@@ -17,7 +17,7 @@ process BLAST_UNMAPPED_READS {
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
 
-    bash "${projectDir}/bin/blast_unmapped_reads.sh" ${prefix} $bam ${params.blast_db} ${params.blast_evalue} ${params.blast_perc_identity} ${params.blast_target_seqs}
+    bash "${projectDir}/bin/blast_unmapped_reads.sh" ${prefix} $bam ${params.blast_db} ${params.blast_tax_db} ${params.blast_evalue} ${params.blast_perc_identity} ${params.blast_target_seqs}
 
     """
 
