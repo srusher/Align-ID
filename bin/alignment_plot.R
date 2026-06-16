@@ -200,7 +200,7 @@ for (i in 1:nrow(ggplot_df)) {
 
 # force ggplot2 to use the order of species as they appear in ggplot_df by converting species column to a factor with levels set in the desired order
 ggplot_df$species <- factor(ggplot_df$species, levels = unique(ggplot_df$species))
-ggplot_df$ambiguity <- factor(ggplot_df$ambiguity, levels = rev(unique(ggplot_df$ambiguity)))
+ggplot_df$ambiguity <- factor(ggplot_df$ambiguity, levels = rev(c("none", "single_genome", "multi_genome")))
 
 
 plot_1 <- ggplot(ggplot_df, aes(x = species, group = ambiguity, y = percent_reads)) +
