@@ -5,7 +5,7 @@ process ALIGNMENT_CLASSIFY {
 
     input:
     tuple val(meta), path(bam)
-    path(seq2tax_map)
+    tuple val(meta), path(sam_db)
 
 
     output:
@@ -15,7 +15,6 @@ process ALIGNMENT_CLASSIFY {
     tuple val(meta), path('*primary_unambiguous-sorted.bam') , optional:true, emit: primary_unambiguous
     tuple val(meta), path('*primary_ambiguous_single_genome-sorted.bam') , optional:true, emit: primary_ambiguous_single_genome
     tuple val(meta), path('*primary_ambiguous_multi_genome-sorted.bam') , optional:true, emit: primary_ambiguous_multi_genome
-    tuple val(meta), path('*.db') , optional:true, emit: sam_db     
 
     script:
     def prefix = "${meta.id}"
@@ -24,7 +23,7 @@ process ALIGNMENT_CLASSIFY {
     
         """
 
-        bash "${projectDir}/bin/alignment_classify_SE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.mapping_quality} ${meta.single_end}
+        bash "${projectDir}/bin/alignment_classify_SE.sh" $prefix $bam $sam_db ${params.ncbi_taxonomy_names} ${params.mapping_quality}
 
         """
 
@@ -33,11 +32,11 @@ process ALIGNMENT_CLASSIFY {
         """
         if [ ${meta.single_end} == 'true' ]; then
 
-            bash "${projectDir}/bin/alignment_classify_SE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.mapping_quality} ${meta.single_end} 
+            bash "${projectDir}/bin/alignment_classify_SE.sh" $prefix $bam $sam_db ${params.ncbi_taxonomy_names} ${params.mapping_quality}
 
         else
 
-            bash "${projectDir}/bin/alignment_classify_PE.sh" $prefix $bam $seq2tax_map ${params.ncbi_taxonomy_names} ${projectDir} ${params.mapping_quality} ${meta.single_end} 
+            bash "${projectDir}/bin/alignment_classify_PE.sh" $prefix $bam $sam_db ${params.ncbi_taxonomy_names} ${params.mapping_quality} 
 
         fi
 

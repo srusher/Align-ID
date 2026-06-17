@@ -1,4 +1,5 @@
 // global modules
+include { IMPORT_SAM_TO_DB														 } from '../../modules/local/import_sam_to_db'
 include { ALIGNMENT_CLASSIFY                              						 } from '../../modules/local/alignment_classify'
 include { BLAST_UNMAPPED_READS                            					     } from '../../modules/local/blast_unmapped_reads'
 include { SAMTOOLS_DEPTH                                 						 } from '../../modules/nf-core/samtools/depth/main'
@@ -47,6 +48,13 @@ workflow ALIGNMENT_CLASSIFICATION_AND_QC {
 
 	}
 
+	IMPORT_SAM_TO_DB (
+
+		aligner_bam_ch,
+		params.seqid2taxid_map,
+
+	)
+
 	if (!params.skip_filter_alignment_by_id) {
 
 		FILTER_ALIGNMENTS_BY_ID (
@@ -54,7 +62,8 @@ workflow ALIGNMENT_CLASSIFICATION_AND_QC {
 			aligner_bam_ch,
 			params.seqid2taxid_map,
 			params.my_tax_ids,
-			params.include_children
+			params.include_children,
+			IMPORT_SAM_TO_DB.out.sam_db
 
 		)
 
@@ -70,7 +79,7 @@ workflow ALIGNMENT_CLASSIFICATION_AND_QC {
 	ALIGNMENT_CLASSIFY (
 
 		aligned_bam,
-		params.seqid2taxid_map
+		IMPORT_SAM_TO_DB.out.sam_db
 
 	)
 
@@ -153,7 +162,7 @@ workflow ALIGNMENT_CLASSIFICATION_AND_QC {
 	emit:
 
 	sorted_bam = SAMTOOLS_SORT_INDEX.out.bam
-	sam_db = ALIGNMENT_CLASSIFY.out.sam_db
+	sam_db = IMPORT_SAM_TO_DB.out.sam_db
 	filtered_reads = filtered_reads
 	ch_multiqc_files = ch_multiqc_files
 
