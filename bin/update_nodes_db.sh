@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS TAX_IDS (
 );
 "
 
-while IFS= read -r || [[ -n "$id" ]]; do #iterating through tax ids listed in the tax id input file
+while IFS= read -r id || [[ -n "$id" ]]; do #iterating through tax ids listed in the tax id input file
 
     data=$(singularity exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $local_nodes_db "SELECT parent_id FROM TAX_IDS WHERE parent_id = "$id"")
 
