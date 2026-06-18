@@ -3,7 +3,7 @@
 
 ## Summary
 
-**Align-ID** is a bioinformatics workflow designed to generate taxonomic profiles from environmental samples sequenced by Oxford Nanopore and Illumia instruments using a competative alignment approach. This workflow houses two separate analysis pipelines for long read and short read data sets:
+**Align-ID** is a SQL optimized, metagenomic classification workflow that utilizes a competative-alignment approach to assign taxonomy to Oxford Nanopore and Illumina sequencing reads. This workflow houses two separate analysis pipelines for long read and short read data sets:
 
 **Long Read ID**
 1. _OPTIONAL_: Subsampling ([`BBMap`](https://github.com/BioInfoTools/BBMap))
@@ -70,9 +70,25 @@ source activate nf-env
 
 ## Setup
 
-First, prepare a samplesheet with your input fastq data that looks as follows:
+First, prepare a samplesheet with your input fastq data that adheres to the following format:
 
-**Long Read Samplesheet**
+**Automatically Format Samplesheet**
+
+The helper script, `./bin/format_samplesheet.sh`, can be used to automatically format your long and short read samplesheets. Usage below:
+
+```bash
+bash ./bin/format_samplesheet.sh <path/to/fastq_dir> <delimiter> <read_type> <single_end> <path/to/samplesheet> 
+```
+
+Example Usage:
+
+```bash
+bash ./bin/format_samplesheet.sh data/short-read/fastq '_' 'short' 'false' 'assets/short-read/samplesheets/samplesheet.csv 
+```
+
+The `delimiter` parameter should be the first character that follows the last letter of your desired prefix. For example, if I have a fastq file named: `ML1_0819-01_trimmed_R1` and I want the prefix for to be `ML1` then I would set to delimiter to `_` character
+
+**Long Read Samplesheet: Manual Formatting**
 
 `assets\long-read\samplesheet.csv`:
 
@@ -86,7 +102,7 @@ The top row is the header row ("sample,fastq_long") and should never be altered.
 
 There is an example samplesheet located under the assets folder (`assets/long-read/samplesheet.csv`) that you can view and edit yourself. **NOTE** If you use this samplesheet, please make a back up copy of it as it will be overwritten each time you pull an updated version of this repository. 
 
-**Short Read Samplesheet**
+**Short Read Samplesheet: Manual Formatting**
 
 Paired Reads `assets\short-read\samplesheet_paired.csv`:
 
@@ -108,13 +124,9 @@ Notice how the short read samplesheets have 3 header columns `sample,fastq_1,fas
 
 **Config File Setup**
 
-Next we'll want to make a copy of the `long-read.conf` and `short-read.conf` configuration files located in the `conf` directory and rename them to include your username. For example:
+The configuration files for the long read and short read workflows can be found in `./conf/long-read.conf` and `./conf/short-read.conf` respectively.
 
-`cp conf/short-read.conf <target-dir>/rtq0-short-read.conf`
-
-To avoid overwrite issues when pulling updated versions of this repository, you should store these config files outside of the project directory.
-
-Now open the config file with your text editor of choice and make the appropriate adjustments to your parameters. Of note, you'll want to change the `input` and `outdir` parameters according to the input samplesheet you setup and an output directory that contains your user ID and is unique to your dataset
+Open the config file(s) and make the appropriate adjustments to each parameters. Of note, the `input` parameter should be set to the path of your samplesheet and the `outdir` parameter should be set to a new directory for each iteration - otherwise you risk overwriting the results of previous runs.
 
 **Reference Genome and Index**
 
@@ -138,7 +150,7 @@ singularity exec https://depot.galaxyproject.org/singularity/minimap2%3A2.28--he
 
 Note that the `-d` flag with a `.mmi` file extension represents the output index file path.
 
-Once you've created your minimap2 index, go into your configuration file(s) and update the `minimap2_index` parameter with the file path to your new minimap2 index
+Once you've got your reference FASTA or index setup, go into your configuration file(s) and update the `minimap2_genome_reference` parameter with the file path to your `.fasta` or `.mmi` file.
 
 **Taxonomy Assets**
 
@@ -187,6 +199,10 @@ bash ./bin/add_fasta_to_seq_map.sh '/path/to/seqid2taxid.map' '/path/to/ref_fast
 If you are planning on mapping your sample to multiple custom reference genomes from different species then you will need to run this script once per reference fasta. 
 NOTE: This step needs to be performed on individual fasta files. Do not run this script on a concatentated fasta unless each individual contig originated from the same species
 
+**Filtering Taxonomic ID**
+
+If you're only interested in the classifications of a particular taxonomy then set the parameter `skip_filter_alignment_by_id` to `false` and enter the tax ID(s) of interest into a text file, each separated by a new line. Then set the `my_tax_ids` parameter to the path of the file containing your tax IDs. To include all child taxonomies of the provided tax IDs, set the `include_children` parameter to `true`. For example, if you want to filter for Enterobacterales (family) and all of its child taxonomies (genus, species, and strain), you would enter tax ID `543` into your `my_tax_ids` file and set `include_children` to `true`.
+
 
 ## Usage
 
@@ -213,12 +229,12 @@ If you are familiar with nextflow and SciComp's computing environment, you can i
  
 Long Read Format:
 ```bash
-nextflow run main.nf -c 'path/to/long-read-config' -profile singularity,local,long
+nextflow run main.nf -profile singularity,local,long
 ```
 
 Short Read Format:
 ```bash
-nextflow run main.nf -c 'path/to/short-read-config' -profile singularity,local,short
+nextflow run main.nf -profile singularity,local,short
 ```
 
 
@@ -276,14 +292,9 @@ Parameters for the long read and short read analysis pipelines are located in `.
 **Shared Parameters**:
 | Parameter | Data Type | Default Value |
 |:---------:|:---------:|:-------------:|
-| `--metagenomic_sample` |  boolean | true |
 | `--memory_saver` | boolean | false |
 | `--skip_subsample` | boolean | true |
 | `--skip_trimming` | boolean | false |
-| `--skip_alignment_based_filtering` | boolean | false |
-| `--skip_bbmap_dedup` | boolean | false |
-| `--skip_assembly` | boolean | true |
-| `--skip_binning` | boolean | true |
 | `--skip_blast_unmapped` | boolean | true |
 | `--skip_filter_alignment_by_id` | boolean | true |
 | **BBmap Parameters**|            |            |
@@ -291,21 +302,17 @@ Parameters for the long read and short read analysis pipelines are located in `.
 | **Minimap2 Parameters** |            |            |
 | `--minimap2_meta` | string | "all-genomes" |
 | `--split_prefix` | boolean | false |
+| **Taxonomic ID Filtering Parameter** |            |            |
+| `--my_tax_ids` | path | "<null>" |
 | **Alignment Classification Parameters** |            |            |
-| `--seqid2taxid_map` | string | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/seqid2taxid_no-strain.map" |
+| `--seqid2taxid_map` | path | "./assets/taxonomy/seqid2taxid_no-strain.map" |
 | `--filter_alignment_by_id` | boolean | false |
-| `--my_tax_ids` | string | "./assets/tax_ids_acanth-verm-naegleria.txt" |
-| `--include_children` | boolean | false |
-| `--ncbi_taxonomy_nodes` | string | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/nodes.dmp" |
-| `--ncbi_taxonomy_names` | string | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/taxonomy/names.dmp" |
-| `--local_nodes_db` | string | "/scicomp/groups-pure/WDPB/EMEL/Reference_Databases/taxonomy/nodes_sqlite3.db" |
+| `--ncbi_taxonomy_nodes` | path | "./assets/taxonomy/nodes.dmp" |
+| `--ncbi_taxonomy_names` | path | "./assets/taxonomy/names.dmp" |
+| `--local_nodes_db` | path | "./assets/taxonomy/parent_child_nodes.db" |
 | `--mapping_quality` | integer | 0 |
-| `--non_standard_reference` | boolean | false |
-| `--use_tmux_multiprocessing` | boolean | true |
 | **BLAST Parameters** |            |            |
-| `--use_blast_standard` | boolean | false |
-| `--blast_standard_db` | string | "/scicomp/reference/ncbi-blast-databases/nt" |
-| `--blast_db` | string | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/arch-bact-fung-hum-amoeba_refseq/arch-bact-fung-hum-amoeba_refseq" |
+| `--blast_db` | path | "/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/arch-bact-fung-hum-amoeba_refseq/arch-bact-fung-hum-amoeba_refseq" |
 | `--blast_evalue` | string | "1e-10" |
 | `--blast_perc_identity` | string | "90" |
 | `--blast_target_seqs` | string | "5" |
@@ -316,13 +323,13 @@ Parameters for the long read and short read analysis pipelines are located in `.
 |:---------:|:---------:|:-------------:|
 | `--skip_cutadapt` | boolean | true |
 | **CutAdapt Parameters** |            |            |
-| `--cutadapt_adapter_fasta` | string | "./assets/long-read/adapters/ATL-gene-adapters_cutadapt.fasta" |
+| `--cutadapt_adapter_fasta` | path | "./assets/long-read/adapters/ATL-gene-adapters_cutadapt.fasta" |
 | **Chopper Parameters** |            |            |
 | `--chopper_q` | integer | 20 |
 | `--chopper_min_len` | integer | 1000 |
 | `--chopper_max_len` | integer | 2147483647 |
 | **Minimap2 Parameters** |            |            |
-| `--minimap2_index` | string | '/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/long-read/ATL_gene.mmi' |
+| `--minimap2_genome_reference` | path | '/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/long-read/ATL_gene.mmi' |
 | `--minimap2_mismatch_penalty` | integer | 4 |
 
 
@@ -332,14 +339,14 @@ Parameters for the long read and short read analysis pipelines are located in `.
 | `--skip_merging` | boolean | true |
 | **Trimming Parameters** |            |            |
 | `--trim_tool` | string | "trimmomatic" |
-| `--adapt_ref` | string | "./assets/short-read/sequencing-adapters.fasta" |
+| `--adapt_ref` | path | "./assets/short-read/sequencing-adapters.fasta" |
 | **Trimmomatic Parameters** |            |            |
 | `--trimmomatic_params` | string | "ILLUMINACLIP:./assets/short-read/sequencing-adapters.fasta:2:30:10 SLIDINGWINDOW:4:20 MINLEN:50" |
 | **FASTP Parameters** |            |            |
 | `--fastp_params` | string | "" |
 | `--adapter_auto_detect` | boolean | false |
 | **Minimap2 Parameters** |            |            |
-| `--minimap2_index` | string | '/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/short-read/ZYMO.mmi' |
+| `--minimap2_genome_reference` | string | '/scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/short-read/ZYMO.mmi' |
 | `--minimap2_mismatch_penalty` | integer | 8 |
 
 
