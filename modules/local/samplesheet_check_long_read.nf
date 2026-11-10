@@ -9,6 +9,7 @@ process SAMPLESHEET_CHECK {
 
     input:
     path samplesheet
+    val complete
 
     output:
     path '*.csv'       , emit: csv

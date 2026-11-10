@@ -22,9 +22,9 @@ declare -A prefix_count
 read_1=''
 read_2=''
 
-for i in $(ls $fastq_dir); do
+for i in $(ls $fastq_dir | grep 'fastq.gz'); do
 
-	prefix=$(echo $i | cut -d "$delimiter" -f1)
+	prefix=$(echo $i | cut -d "$delimiter" -f1-4)
 
 	if [[ $single_end == 'true' ]]; then
 

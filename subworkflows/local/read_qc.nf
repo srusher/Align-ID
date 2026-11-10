@@ -13,6 +13,9 @@ include { PORECHOP_PORECHOP                               } from '../../modules/
 include { CHOPPER                                         } from '../../modules/nf-core/chopper/main'
 include { CUTADAPT                                        } from '../../modules/nf-core/cutadapt/main'
 
+// all read QC modules
+include { MANUAL_TRIM                                     } from '../../modules/local/manual_trim'
+
 workflow READ_QC {
     take:
     raw_reads // channel: [ val(meta), [ reads ] ]
@@ -27,6 +30,18 @@ workflow READ_QC {
 		)
 
 		ch_multiqc_files.mix(FASTQC_RAW.out.zip.collect{it[1]}.ifEmpty([]))
+
+		if (!params.skip_manual_trimming){
+
+			MANUAL_TRIM (
+
+				raw_reads
+
+			)
+
+			raw_reads = MANUAL_TRIM.out.trimmed_reads
+
+		}
 
 		if (!params.skip_trimming) {
 
@@ -117,6 +132,18 @@ workflow READ_QC {
 		)
 
 		ch_multiqc_files.mix(NANOPLOT_RAW.out.txt.collect{it[1]}.ifEmpty([]))
+
+		if (!params.skip_manual_trimming){
+
+			MANUAL_TRIM (
+
+				raw_reads
+
+			)
+
+			raw_reads = MANUAL_TRIM.out.trimmed_reads
+
+		}
 
 		if (!params.skip_trimming) {
 

@@ -24,7 +24,6 @@ process SAMTOOLS_DEPTH {
     """
     samtools \\
         depth \\
-        -a \\
         --threads ${task.cpus-1} \\
         $args \\
         -o ${prefix}.tsv \\

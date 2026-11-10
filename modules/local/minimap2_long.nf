@@ -29,12 +29,18 @@ process ALIGN_LONG_READS_MINIMAP2  {
     def bam_output = " | samtools sort -@ ${task.cpus-1} -o ${prefix}.bam ${args2}"
     """
     if ${params.memory_saver}; then
+
+        rm -f ${projectDir}/queue/minimap2/$prefix-minimap2
+    
+    fi
+    
+    if ${params.memory_saver}; then
     
         start="false"
 
         while [[ \$start == "false" ]]; do
 
-            if [[ \$(ls ${projectDir}/queue/minimap2 | wc -l) -gt 1 ]]; then
+            if [[ \$(ls ${projectDir}/queue/minimap2 | wc -l) -eq 2 ]]; then
 
                 sleep 5
             
@@ -51,13 +57,13 @@ process ALIGN_LONG_READS_MINIMAP2  {
     if [[ ${reference} == *".mmi" ]]; then
 
         minimap2 \\
-            $args -a ${reference} ${reads} \\
+            $args -t $task.cpus -a ${reference} ${reads} \\
             $bam_output
 
     else
 
         minimap2 \\
-            $args -ax map-ont ${reference} ${reads} \\
+            $args -t $task.cpus -ax map-ont ${reference} ${reads} \\
             $bam_output
 
     fi    

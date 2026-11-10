@@ -67,7 +67,7 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS                    } from '../modules/nf-c
 //
 // MODULE: custom, local modules
 //
-include { UPDATE_NODES_DB                                 } from '../modules/local/update_nodes_db'
+include { GENERATE_FASTA_TAX_MAP						  } from  '../modules/local/generate_fasta_tax_map'
 include { BBMAP_REFORMAT as BBMAP_REFORMAT_SUBSAMPLE      } from '../modules/local/bbmap_reformat_subsample'
 
 //clearing out minimap2 queues if memory_saver mode is enabled (only required for local compute; memory allocation should generally be handled by the job scheduler when submitting to the cluster)
@@ -97,25 +97,27 @@ ch_multiqc_files = Channel.empty()
 
 workflow ALIGN_ID {
 
-    if (!params.skip_filter_alignment_by_id && params.include_children) {
+    // if (!params.skip_filter_alignment_by_id && params.include_children) {
 
-        UPDATE_NODES_DB (
+    //     UPDATE_NODES_DB (
 
-            params.local_nodes_db,
-            params.ncbi_taxonomy_nodes,
-            params.my_tax_ids
+    //         params.local_nodes_db,
+    //         params.ncbi_taxonomy_nodes,
+    //         params.my_tax_ids
 
-        )
+    //     )
 
-        placeholder = UPDATE_NODES_DB.out.complete
+    //     placeholder = UPDATE_NODES_DB.out.complete
 
-    } else {
+    // } else {
 
-        placeholder = []
+    //     placeholder = []
 
-    }
+    // }
 
     ch_versions = Channel.empty()
+
+    placeholder = []
 
     //
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
@@ -149,6 +151,8 @@ workflow ALIGN_ID {
 
 	}
 
+	// this module will generate a taxonomy map specific to the reference fasta
+	GENERATE_FASTA_TAX_MAP()
 
     if (!params.skip_subsample) {
 
@@ -180,6 +184,7 @@ workflow ALIGN_ID {
 	ALIGNMENT_CLASSIFICATION_AND_QC (
 
 		qc_reads,
+		GENERATE_FASTA_TAX_MAP.out.tax_map,
 		ch_multiqc_files
 
 	)

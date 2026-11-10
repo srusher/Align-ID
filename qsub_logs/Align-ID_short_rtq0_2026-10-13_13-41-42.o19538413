@@ -1,0 +1,213 @@
+
+ N E X T F L O W   ~  version 25.10.4
+
+Launching `main.nf` [loquacious_mestorf] DSL2 - revision: 8d2ab59b08
+
+WARN: Access to undefined parameter `fasta` -- Initialise it to a default value eg. `params.fasta = some_value`
+WARN: The following invalid input values have been detected:
+
+* --igenomes_ignore: true
+* --workflow: short-read
+* --memory_saver: false
+* --skip_subsample: false
+* --skip_merging: true
+* --skip_trimming: false
+* --skip_blast_unmapped: false
+* --skip_filter_alignment_by_id: true
+* --my_tax_ids: /scicomp/home-pure/rtq0/EMEL/projects/align-ID/assets/long-read/tax_ids_acanth-verm-naegleria.txt
+* --include_children: true
+* --num_subsamples: 1000000
+* --trim_tool: trimmomatic
+* --adapt_ref: /scicomp/home-pure/rtq0/EMEL/projects/align-ID/assets/short-read/sequencing-adapters.fasta
+* --trimmomatic_params: ILLUMINACLIP:/scicomp/home-pure/rtq0/EMEL/projects/align-ID/assets/short-read/sequencing-adapters.fasta:2:30:10 SLIDINGWINDOW:4:20 MINLEN:50
+* --fastp_params: 
+* --adapter_auto_detect: false
+* --minimap2_meta: all-genomes
+* --minimap2_genome_reference: /scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/minimap2/index/short-read/super-genome-refseq-with-vspv2.mmi
+* --minimap2_mismatch_penalty: 8
+* --include_primary_seq: true
+* --include_secondary_seq: true
+* --seqid2taxid_map: assets/taxonomy/tax_map.db
+* --ncbi_taxonomy_names: assets/taxonomy/names.dmp
+* --local_nodes_db: assets/taxonomy/parent_child_nodes.db
+* --mapping_quality: 0
+* --blast_tax_db: /scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/taxonomy
+* --blast_db: /scicomp/groups-pure/WDPB/EMEL/Projects/Long_Read_Analysis_RUSHER/data/blast/arch-bact-fung-hum-amoeba_refseq/arch-bact-fung-hum-amoeba_refseq
+* --blast_evalue: 1e-10
+* --blast_perc_identity: 99
+* --blast_target_seqs: 1
+* --minimap2_args: --sr -k21 -w11 --frag=yes -A2 -B8 -O12,32 -E2,1 -r100 -p.5 -N20 -f1000,5000 -n2 -m25 -s40 -g100 -2K50m --heap-sort=yes --split-prefix=tmp -t 32 --secondary-seq
+
+
+WARN: Access to undefined parameter `custom_config_base` -- Initialise it to a default value eg. `params.custom_config_base = some_value`
+
+
+------------------------------------------------------
+  EMEL-Metagenomics v1.0dev
+------------------------------------------------------
+Core Nextflow options
+  runName        : loquacious_mestorf
+  containerEngine: singularity
+  launchDir      : /scicomp/home-pure/rtq0/EMEL/projects/align-ID
+  workDir        : /scicomp/scratch/rtq0/nextflow/work
+  projectDir     : /scicomp/home-pure/rtq0/EMEL/projects/align-ID
+  userName       : rtq0
+  profile        : singularity,cluster_submit,short
+  configFiles    : 
+
+Input/output options
+  input          : /scicomp/home-pure/rtq0/EMEL/projects/align-ID/assets/short-read/samplesheets/TGS_20260824CR2H8.csv
+  outdir         : results/short-read/tgs/20260824CR2H8
+
+Max job request options
+  max_cpus       : 20
+  max_memory     : 300.GB
+
+!! Only displaying parameters that differ from the pipeline defaults !!
+------------------------------------------------------
+If you use EMEL-Metagenomics for your analysis please cite:
+
+* The nf-core framework
+  https://doi.org/10.1038/s41587-020-0439-x
+
+* Software dependencies
+  https://github.com/EMEL-Metagenomics/blob/master/CITATIONS.md
+
+[-        ] ALI…CK_SHORT:SAMPLESHEET_CHECK -
+[-        ] ALI…D:BBMAP_REFORMAT_SUBSAMPLE -
+[-        ] ALIGN_ID:READ_QC:FASTQC_RAW    -
+[-        ] ALIGN_ID:READ_QC:TRIMMOMATIC   -
+[-        ] ALI…_ID:READ_QC:FASTQC_TRIMMED -
+[-        ] ALI…ALIGN_SHORT_READS_MINIMAP2 -
+[-        ] ALI…ON_AND_QC:IMPORT_SAM_TO_DB -
+[-        ] ALI…_AND_QC:ALIGNMENT_CLASSIFY -
+[-        ] ALI…CLASSIFICATION_GRAPH_READS -
+[-        ] ALI…ND_QC:BLAST_UNMAPPED_READS -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_STATS -
+
+[-        ] ALI…CK_SHORT:SAMPLESHEET_CHECK -
+[-        ] ALI…D:BBMAP_REFORMAT_SUBSAMPLE -
+[-        ] ALIGN_ID:READ_QC:FASTQC_RAW    -
+[-        ] ALIGN_ID:READ_QC:TRIMMOMATIC   -
+[-        ] ALI…_ID:READ_QC:FASTQC_TRIMMED -
+[-        ] ALI…ALIGN_SHORT_READS_MINIMAP2 -
+[-        ] ALI…ON_AND_QC:IMPORT_SAM_TO_DB -
+[-        ] ALI…_AND_QC:ALIGNMENT_CLASSIFY -
+[-        ] ALI…CLASSIFICATION_GRAPH_READS -
+[-        ] ALI…ND_QC:BLAST_UNMAPPED_READS -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_STATS -
+[-        ] ALI…AND_QC:SAMTOOLS_SORT_INDEX -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_DEPTH -
+[-        ] ALI…N_AND_QC:SAMTOOLS_COVERAGE -
+[-        ] ALI…D_QC:SAMTOOLS_FASTQ_MAPPED -
+[-        ] ALI…QC:FASTQC_ALIGNED_FILTERED -
+[-        ] ALIGN_ID:MULTIQC               -
+
+[-        ] ALI…CK_SHORT:SAMPLESHEET_CHECK | 0 of 1
+[-        ] ALI…D:BBMAP_REFORMAT_SUBSAMPLE -
+[-        ] ALIGN_ID:READ_QC:FASTQC_RAW    -
+[-        ] ALIGN_ID:READ_QC:TRIMMOMATIC   -
+[-        ] ALI…_ID:READ_QC:FASTQC_TRIMMED -
+[-        ] ALI…ALIGN_SHORT_READS_MINIMAP2 -
+[-        ] ALI…ON_AND_QC:IMPORT_SAM_TO_DB -
+[-        ] ALI…_AND_QC:ALIGNMENT_CLASSIFY -
+[-        ] ALI…CLASSIFICATION_GRAPH_READS -
+[-        ] ALI…ND_QC:BLAST_UNMAPPED_READS -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_STATS -
+[-        ] ALI…AND_QC:SAMTOOLS_SORT_INDEX -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_DEPTH -
+[-        ] ALI…N_AND_QC:SAMTOOLS_COVERAGE -
+[-        ] ALI…D_QC:SAMTOOLS_FASTQ_MAPPED -
+[-        ] ALI…QC:FASTQC_ALIGNED_FILTERED -
+[-        ] ALIGN_ID:MULTIQC               -
+
+[-        ] ALI…CK_SHORT:SAMPLESHEET_CHECK | 0 of 1
+[-        ] ALI…D:BBMAP_REFORMAT_SUBSAMPLE -
+[-        ] ALIGN_ID:READ_QC:FASTQC_RAW    -
+[-        ] ALIGN_ID:READ_QC:TRIMMOMATIC   -
+[-        ] ALI…_ID:READ_QC:FASTQC_TRIMMED -
+[-        ] ALI…ALIGN_SHORT_READS_MINIMAP2 -
+[-        ] ALI…ON_AND_QC:IMPORT_SAM_TO_DB -
+[-        ] ALI…_AND_QC:ALIGNMENT_CLASSIFY -
+[-        ] ALI…CLASSIFICATION_GRAPH_READS -
+[-        ] ALI…ND_QC:BLAST_UNMAPPED_READS -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_STATS -
+[-        ] ALI…AND_QC:SAMTOOLS_SORT_INDEX -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_DEPTH -
+[-        ] ALI…N_AND_QC:SAMTOOLS_COVERAGE -
+[-        ] ALI…D_QC:SAMTOOLS_FASTQ_MAPPED -
+[-        ] ALI…QC:FASTQC_ALIGNED_FILTERED -
+[-        ] ALIGN_ID:MULTIQC               -
+ERROR ~ Error executing process > 'ALIGN_ID:INPUT_CHECK_SHORT:SAMPLESHEET_CHECK (TGS_20260824CR2H8)'
+
+Caused by:
+  Failed to submit process to grid scheduler for execution
+
+
+Command executed:
+
+  qsub -terse .command.run
+
+Command exit status:
+  5
+
+Command output:
+  qsub: Unknown option 
+  
+
+Work dir:
+  /scicomp/scratch/rtq0/nextflow/work/d2/5f19f657e7491c13321a8e74bd51e8
+
+Container:
+  /scicomp/scratch/rtq0/nextflow/singularity_cache/quay.io-biocontainers-python-3.8.3.img
+
+Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
+
+ -- Check '.nextflow.log' file for details
+
+[d2/5f19f6] ALI…_CHECK (TGS_20260824CR2H8) | 0 of 1
+[-        ] ALI…D:BBMAP_REFORMAT_SUBSAMPLE -
+[-        ] ALIGN_ID:READ_QC:FASTQC_RAW    -
+[-        ] ALIGN_ID:READ_QC:TRIMMOMATIC   -
+[-        ] ALI…_ID:READ_QC:FASTQC_TRIMMED -
+[-        ] ALI…ALIGN_SHORT_READS_MINIMAP2 -
+[-        ] ALI…ON_AND_QC:IMPORT_SAM_TO_DB -
+[-        ] ALI…_AND_QC:ALIGNMENT_CLASSIFY -
+[-        ] ALI…CLASSIFICATION_GRAPH_READS -
+[-        ] ALI…ND_QC:BLAST_UNMAPPED_READS -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_STATS -
+[-        ] ALI…AND_QC:SAMTOOLS_SORT_INDEX -
+[-        ] ALI…TION_AND_QC:SAMTOOLS_DEPTH -
+[-        ] ALI…N_AND_QC:SAMTOOLS_COVERAGE -
+[-        ] ALI…D_QC:SAMTOOLS_FASTQ_MAPPED -
+[-        ] ALI…QC:FASTQC_ALIGNED_FILTERED -
+[-        ] ALIGN_ID:MULTIQC               -
+Execution cancelled -- Finishing pending tasks before exit
+-[EMEL-Metagenomics] Pipeline completed with errors-
+ERROR ~ Error executing process > 'ALIGN_ID:INPUT_CHECK_SHORT:SAMPLESHEET_CHECK (TGS_20260824CR2H8)'
+
+Caused by:
+  Failed to submit process to grid scheduler for execution
+
+
+Command executed:
+
+  qsub -terse .command.run
+
+Command exit status:
+  5
+
+Command output:
+  qsub: Unknown option 
+  
+
+Work dir:
+  /scicomp/scratch/rtq0/nextflow/work/d2/5f19f657e7491c13321a8e74bd51e8
+
+Container:
+  /scicomp/scratch/rtq0/nextflow/singularity_cache/quay.io-biocontainers-python-3.8.3.img
+
+Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
+
+ -- Check '.nextflow.log' file for details
+

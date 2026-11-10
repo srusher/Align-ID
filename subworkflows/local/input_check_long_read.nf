@@ -10,7 +10,8 @@ workflow INPUT_CHECK_LONG {
     complete // placeholder file to prevent INPUT_CHECK from running until UPDATE_NODES_DB has finished
 
     main:
-    SAMPLESHEET_CHECK ( samplesheet )
+    SAMPLESHEET_CHECK ( samplesheet,
+        complete )
         .csv
         .splitCsv ( header:true, sep:',' )
         .map { create_fastq_channel(it) }

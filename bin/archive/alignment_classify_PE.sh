@@ -1,0 +1,635 @@
+#!/bin/bash
+SAMTOOLS_CONTAINER="https://depot.galaxyproject.org/singularity/samtools%3A1.21--h50ea8bc_0"
+SQLITE3_CONTAINER="https://depot.galaxyproject.org/singularity/sqlite%3A3"
+
+bind_dir="/"$(echo $(pwd) | cut -d '/' -f2)
+
+prefix=$1
+bam=$2
+sam_db=$3
+taxa_names=$4
+mapq=$5
+
+# defining all alignment output files
+summary_file="$prefix-taxonomic-summary.tsv"
+primary_all="$prefix-primary_all.sam"
+primary_unambiguous="$prefix-primary_unambiguous.sam"
+primary_ambiguous_single_genome="$prefix-primary_ambiguous_single_genome.sam"
+primary_ambiguous_multi_genome="$prefix-primary_ambiguous_multi_genome.sam"
+unmapped="$prefix-unmapped.sam"
+
+cur_dir="$(pwd)"
+
+sqlite_pragmas="
+PRAGMA cache_size = -50000000;
+PRAGMA temp_store = MEMORY;
+"
+
+echo "Parsing BAM headers"
+
+# printing bam headers to all primary alignment output sam files
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $primary_all 
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $primary_unambiguous
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $primary_ambiguous_single_genome
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $primary_ambiguous_multi_genome
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam > $unmapped
+
+# this loop will ensure that the SAM database isn't locked from the previous the import module
+run_with_retry() {
+
+    local sql="$1"
+    local output
+    local loop_again='true'
+
+    while [[ "$loop_again" == 'true' ]]; do
+
+        output=$(singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".mode tabs" "$sql" 2>&1)
+        
+        if [[ "$output" == *'database is locked'* ]]; then
+
+            echo "$sam_db is locked - trying again in 10 seconds"
+            sleep 10
+
+        else
+
+            loop_again='false'
+
+        fi
+    done
+
+	if [[ $output != '' ]]; then
+
+		echo "$output"
+	
+	fi
+
+}
+#############################################################################################
+###                                 SAM Parsing Section                                  ####
+#############################################################################################
+
+run_with_retry \
+"
+DROP TABLE IF EXISTS total_read_pairs; 
+CREATE TABLE total_read_pairs (num_reads FLOAT);
+"
+
+
+echo "Calculating total read pairs: $(date '+%Y-%m-%d %H:%M:%S')"
+
+# run_with_retry \
+# 	"
+# 	$sqlite_pragmas
+# 	INSERT INTO total_read_pairs
+# 	SELECT COUNT(read_id) / 2
+# 	FROM sam_complete
+# 	WHERE tp_tag != 'tp:A:S';
+# 	"
+
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO total_read_pairs
+	SELECT COUNT(DISTINCT read_id)
+	FROM sam_complete;
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS unmapped_pairs;
+	CREATE TABLE unmapped_pairs (read_id TEXT, r1_flag INTEGER, r2_flag INTEGER, ref_id TEXT, mapq INTEGER);
+	"
+
+echo "Populating unmapped pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO unmapped_pairs
+	SELECT read_id, MIN(flag), MAX(flag), ref_id, mapq
+	FROM sam_complete
+	WHERE ref_id = 'unclassified' and (flag = 77 or flag = 141)
+	GROUP BY read_id
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS r1_reads;
+	CREATE TABLE r1_reads (read_id TEXT, r1_flag INTEGER, r1_ref_id TEXT, r1_tax_id TEXT, r1_name TEXT, r1_mapq INTEGER, r1_p_next INTEGER, r1_as_tag INTEGER);
+	"
+
+echo "Populating r1-reads table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO r1_reads
+	SELECT read_id, MIN(flag), ref_id, tax_id, name, mapq, p_next, as_tag
+	FROM sam_complete
+	WHERE tp_tag = 'tp:A:P' or (r_next = '=' and cigar = '*')
+	GROUP BY read_id
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS r2_reads;
+	CREATE TABLE r2_reads (read_id TEXT, r2_flag INTEGER, r2_ref_id TEXT, r2_tax_id TEXT, r2_name TEXT, r2_mapq INTEGER, r2_p_next INTEGER, r2_as_tag INTEGER);
+	"
+
+echo "Populating r2-reads table: $(date '+%Y-%m-%d %H:%M:%S')"
+
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO r2_reads
+	SELECT read_id, MAX(flag), ref_id, tax_id, name, mapq, p_next, as_tag
+	FROM sam_complete
+	WHERE tp_tag = 'tp:A:P' or (r_next = '=' and cigar = '*')
+	GROUP BY read_id
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS mapped_pairs;
+	CREATE TABLE mapped_pairs (read_id TEXT, r1_flag INTEGER, r2_flag INTEGER, r1_ref_id TEXT, r2_ref_id TEXT, r1_tax_id TEXT, r1_name TEXT, r2_tax_id TEXT, r2_name TEXT, r1_mapq INTEGER, r2_mapq INTEGER, r1_p_next INTEGER, r2_p_next INTEGER, r1_as_tag INTEGER, r2_as_tag INTEGER);
+	"
+
+echo "Populating mapped_pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO mapped_pairs
+	SELECT r1.read_id, r1.r1_flag, r2.r2_flag, r1.r1_ref_id, r2.r2_ref_id, r1.r1_tax_id, r1.r1_name, r2.r2_tax_id, r2.r2_name, r1.r1_mapq, r2.r2_mapq, r1.r1_p_next, r2.r2_p_next, r1.r1_as_tag, r2.r2_as_tag
+	FROM r1_reads as r1
+	JOIN r2_reads as r2 ON (r1.read_id = r2.read_id)
+	GROUP BY r1.read_id
+	"
+
+echo "Updating mapped_pairs table unclassified tax IDs: $(date '+%Y-%m-%d %H:%M:%S')"
+# mapped_pairs table may contain read pairs where one mate is unmapped while the other is mapped - here we are converting their reference ID and tax ID to unclassified
+run_with_retry \
+	"
+	$sqlite_pragmas
+	UPDATE mapped_pairs
+	SET r1_tax_id = 'unclassified', r1_name = 'unclassified'
+	WHERE r1_ref_id = 'unclassified' and r1_tax_id IS NULL;
+
+	UPDATE mapped_pairs
+	SET r2_tax_id = 'unclassified', r2_name = 'unclassified'
+	WHERE r2_ref_id = 'unclassified' and r2_tax_id IS NULL;
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS top_secondary_mappings;
+	CREATE TABLE top_secondary_mappings (read_id TEXT, sec_tax_id TEXT, sec_name TEXT, sec_p_next INTEGER, sec_as_tag INTEGER);
+	"
+
+echo "Populating top_secondary_mappings table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO top_secondary_mappings
+	SELECT read_id, tax_id as tax_id, name, p_next, MAX(as_tag) as as_tag
+	FROM sam_complete
+	WHERE tp_tag = 'tp:A:S'
+	GROUP BY read_id, p_next, tax_id
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS top_secondary_mappings_taxa_count;
+	CREATE TABLE top_secondary_mappings_taxa_count (read_id TEXT, taxa_count INTEGER);
+	"
+
+echo "Populating top_secondary_mappings_taxa_count table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO top_secondary_mappings_taxa_count
+	SELECT read_id, COUNT(DISTINCT sec_tax_id) as taxa_count
+	FROM top_secondary_mappings
+	GROUP BY read_id
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS secondary_mapping_aggregate;
+	CREATE TABLE secondary_mapping_aggregate (read_id TEXT, sec_tax_id TEXT, sec_name TEXT, sec_p_next INTEGER, sec_as_tag INTEGER, sec_taxa_count INTEGER);
+	"
+
+echo "Populating secondary_mapping_aggregate table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO secondary_mapping_aggregate
+	SELECT top_secondary_mappings.read_id, top_secondary_mappings.sec_tax_id, top_secondary_mappings.sec_name, top_secondary_mappings.sec_p_next, top_secondary_mappings.sec_as_tag, top_secondary_mappings_taxa_count.taxa_count
+	FROM top_secondary_mappings
+	LEFT JOIN top_secondary_mappings_taxa_count ON (top_secondary_mappings.read_id = top_secondary_mappings_taxa_count.read_id)
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS unambiguous_pairs;
+	CREATE TABLE unambiguous_pairs (read_id TEXT, r1_flag INTEGER, r2_flag INTEGER, r1_ref_id TEXT, r2_ref_id TEXT, r1_tax_id TEXT, r1_name TEXT, r2_tax_id TEXT, r2_name TEXT, r1_mapq INTEGER, r2_mapq INTEGER, r1_p_next INTEGER, r2_p_next INTEGER, r1_as_tag INTEGER, r2_as_tag INTEGER);
+	"
+
+echo "Populating unambiguous_pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO unambiguous_pairs
+	SELECT *
+	FROM mapped_pairs
+	WHERE r1_tax_id = r2_tax_id and r1_mapq > 0 and r2_mapq > 0
+	"
+
+echo "Populating ambiguous_single_genome_pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS ambiguous_single_genome_pairs;
+	CREATE TABLE ambiguous_single_genome_pairs (read_id TEXT, r1_tax_id TEXT, r1_name TEXT, r2_tax_id, r2_name TEXT, r1_mapq INTEGER, r2_mapq INTEGER, sec_tax_id TEXT, sec_taxa_count INTEGER);
+	"
+
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO ambiguous_single_genome_pairs
+	SELECT mp.read_id, mp.r1_tax_id, mp.r1_name, mp.r2_tax_id, mp.r2_name, mp.r1_mapq, mp.r2_mapq, sma.sec_tax_id, sma.sec_taxa_count
+	FROM mapped_pairs as mp
+	JOIN secondary_mapping_aggregate as sma ON mp.read_id = sma.read_id AND mp.r1_tax_id = sma.sec_tax_id
+	WHERE mp.r1_tax_id = mp.r2_tax_id and (mp.r1_mapq = 0 or mp.r2_mapq = 0) and sma.sec_taxa_count = 1
+	GROUP BY mp.read_id
+	
+	UNION ALL
+
+	SELECT mp.read_id, mp.r1_tax_id, mp.r1_name, mp.r2_tax_id, mp.r2_name, mp.r1_mapq, mp.r2_mapq, sma.sec_tax_id, sma.sec_taxa_count
+	FROM mapped_pairs as mp
+	JOIN secondary_mapping_aggregate as sma ON mp.read_id = sma.read_id AND mp.r1_tax_id = sma.sec_tax_id
+	WHERE mp.r1_tax_id != 'unclassified' and mp.r2_tax_id = 'unclassified' and mp.r1_mapq = 0 and sma.sec_taxa_count = 1
+	GROUP BY mp.read_id
+
+	UNION ALL
+
+	SELECT mp.read_id, mp.r1_tax_id, mp.r1_name, mp.r2_tax_id, mp.r2_name, mp.r1_mapq, mp.r2_mapq, sma.sec_tax_id, sma.sec_taxa_count
+	FROM mapped_pairs as mp
+	JOIN secondary_mapping_aggregate as sma ON mp.read_id = sma.read_id AND mp.r2_tax_id = sma.sec_tax_id
+	WHERE mp.r1_tax_id = 'unclassified' and mp.r2_tax_id != 'unclassified' and mp.r2_mapq = 0 and sma.sec_taxa_count = 1
+	GROUP BY mp.read_id
+
+	UNION ALL
+
+	SELECT mp.read_id, mp.r1_tax_id, mp.r1_name, mp.r2_tax_id, mp.r2_name, mp.r1_mapq, mp.r2_mapq, sma.sec_tax_id, sma.sec_taxa_count
+	FROM mapped_pairs as mp
+	JOIN secondary_mapping_aggregate as sma ON mp.read_id = sma.read_id AND mp.r2_tax_id = sma.sec_tax_id
+	WHERE mp.r1_tax_id != 'unclassified' and mp.r2_tax_id = 'unclassified' and mp.r1_mapq > 0
+	GROUP BY mp.read_id
+		
+	UNION ALL
+
+	SELECT mp.read_id, mp.r1_tax_id, mp.r1_name, mp.r2_tax_id, mp.r2_name, mp.r1_mapq, mp.r2_mapq, sma.sec_tax_id, sma.sec_taxa_count
+	FROM mapped_pairs as mp
+	JOIN secondary_mapping_aggregate as sma ON mp.read_id = sma.read_id AND mp.r2_tax_id = sma.sec_tax_id
+	WHERE mp.r1_tax_id = 'unclassified' and mp.r2_tax_id != 'unclassified' and mp.r2_mapq > 0
+	GROUP BY mp.read_id
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS ambiguous_multi_genome_pairs;
+	CREATE TABLE ambiguous_multi_genome_pairs (read_id TEXT, r1_tax_id TEXT, r1_name TEXT, r2_tax_id TEXT, r2_name TEXT, r1_mapq INTEGER, r2_mapq INTEGER, r1_as_tag INTEGER, r2_as_tag INTEGER);
+	"
+
+echo "Populating ambiguous_multi_genome_pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO ambiguous_multi_genome_pairs
+	SELECT mp.read_id, mp.r1_tax_id, mp.r1_name, mp.r2_tax_id, mp.r2_name, mp.r1_mapq, mp.r2_mapq, mp.r1_as_tag, mp.r2_as_tag
+	FROM mapped_pairs as mp
+	WHERE mp.read_id NOT IN (
+		SELECT read_id 
+		FROM unambiguous_pairs
+
+		UNION ALL
+
+		SELECT read_id
+		FROM ambiguous_single_genome_pairs
+	)
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS unambiguous_hits_by_name;
+	CREATE TABLE unambiguous_hits_by_name (name TEXT, total_hits);
+	"
+
+echo "Populating unambiguous_hits_by_name table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+    INSERT INTO unambiguous_hits_by_name
+	SELECT r1_name, COUNT(DISTINCT read_id)
+	FROM unambiguous_pairs
+	GROUP BY r1_name;
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS ambiguous_single_genome_hits_by_name;
+	CREATE TABLE ambiguous_single_genome_hits_by_name (name TEXT, total_hits);
+	"
+
+echo "Populating ambiguous_single_genome_hits_by_name table: $(date '+%Y-%m-%d %H:%M:%S')"
+# for single genome ambiguous pairs we need to make sure the primary tax ID is set to the tax ID of the mate that is NOT 'unclassified' when applicable
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO ambiguous_single_genome_hits_by_name
+	SELECT q1.name, COUNT(q1.name)
+	FROM (
+	SELECT CASE
+			WHEN r1_name = 'unclassified' THEN
+				r2_name
+			WHEN r2_name = 'unclassified' THEN
+				r1_name
+			ELSE
+				r1_name
+			END name
+	FROM ambiguous_single_genome_pairs
+	) as q1
+	GROUP BY q1.name
+	"
+
+run_with_retry \
+	"
+	DROP TABLE IF EXISTS ambiguous_multi_genome_hits_by_name;
+	CREATE TABLE ambiguous_multi_genome_hits_by_name (name TEXT, total_hits);
+	"
+
+echo "Populating ambiguous_multi_genome_hits_by_name table: $(date '+%Y-%m-%d %H:%M:%S')"
+run_with_retry \
+	"
+	$sqlite_pragmas
+	INSERT INTO ambiguous_multi_genome_hits_by_name
+	SELECT q1.name, COUNT(q1.name)
+	FROM (
+	SELECT CASE
+			WHEN r1_name = 'unclassified' THEN
+				r2_name
+			WHEN r2_name = 'unclassified' THEN
+				r1_name
+			WHEN r1_as_tag > r2_as_tag THEN
+				r1_name
+			WHEN r2_as_tag > r1_as_tag THEN
+				r2_name			
+			ELSE
+				r1_name
+			END name
+	FROM ambiguous_multi_genome_pairs
+	) as q1
+	GROUP BY q1.name
+	"
+
+echo "Populating Summary File: $(date '+%Y-%m-%d %H:%M:%S')"
+
+echo -e "species\tnum_reads\tpercent_reads\tambiguity" > "$summary_file"
+
+run_with_retry \
+	"
+	$sqlite_pragmas
+    SELECT unmapped_pairs.ref_id, COUNT(unmapped_pairs.read_id), ROUND(COUNT(unmapped_pairs.read_id) / total_read_pairs.num_reads * 100,6) as percentage
+    FROM unmapped_pairs
+	LEFT JOIN total_read_pairs
+	GROUP BY ref_id
+	" | awk -F'\t' -v OFS='\t' '{print $0, "none"}' >> "$summary_file"
+
+run_with_retry \
+	"
+	$sqlite_pragmas
+    SELECT unambiguous_hits_by_name.name, unambiguous_hits_by_name.total_hits, ROUND(unambiguous_hits_by_name.total_hits / total_read_pairs.num_reads * 100,6) as percentage
+    FROM unambiguous_hits_by_name
+	LEFT JOIN total_read_pairs
+	GROUP BY name
+	" | awk -F'\t' -v OFS='\t' '{print $0, "none"}' >> "$summary_file"
+
+run_with_retry \
+	"
+	$sqlite_pragmas
+    SELECT ambiguous_single_genome_hits_by_name.name, ambiguous_single_genome_hits_by_name.total_hits, ROUND(ambiguous_single_genome_hits_by_name.total_hits / total_read_pairs.num_reads * 100,6) as percentage
+    FROM ambiguous_single_genome_hits_by_name
+	LEFT JOIN total_read_pairs
+	GROUP BY name
+	" | awk -F'\t' -v OFS='\t' '{print $0, "single_genome"}' >> "$summary_file"
+
+run_with_retry \
+	"
+	$sqlite_pragmas
+    SELECT ambiguous_multi_genome_hits_by_name.name, ambiguous_multi_genome_hits_by_name.total_hits, ROUND(ambiguous_multi_genome_hits_by_name.total_hits / total_read_pairs.num_reads * 100,6) as percentage
+    FROM ambiguous_multi_genome_hits_by_name
+	LEFT JOIN total_read_pairs
+	GROUP BY name
+	" | awk -F'\t' -v OFS='\t' '{print $0, "multi_genome"}' >> "$summary_file"
+
+# while IFS= read -r line || [[ -n "$line" ]]; do
+
+# 	#skipping header line
+# 	if [ $count -lt 1 ]; then
+
+# 		count=$((count+1))
+# 		continue
+	
+# 	fi
+
+# 	tax_id=$(echo "$line" | cut -f1)
+
+# 	# if the tax_id var contains letters then it is most likely a nonstandard reference (or it wasn't included in the taxonomy map) and we don't want to try and look this up in the names.dmp file - same logic applies to unclassified / unmapped reads
+# 	if [[ $tax_id == "unclassified" ]]; then
+
+# 		continue
+		
+# 	elif [[ "$tax_id" =~ [a-zA-Z] ]]; then
+
+# 		continue
+
+# 	fi
+
+# 	# this line is grabbing the scientific name from the names.dmp taxonomy file
+# 	species_name=$(grep "^$tax_id.[|].*scientific name" $taxa_names | cut -d "|" -f 2 | tr -d '\t')
+
+# 	sed -i "s|^\<$tax_id\>|$species_name|g" "$summary_file"
+
+# done < "$summary_file"
+
+# reordering summary file to list classifications from highest read count to lowest and to group by species
+{
+
+  head -n 1 $summary_file
+  tail -n +2 $summary_file | awk -F'\t' '
+    { total[$1]+=$2 }
+    { rows[NR]=$0; sp[NR]=$1 }
+    END {
+      for (i=1;i<=NR;i++) print total[sp[i]]"\t"rows[i]
+    }' | sort -t$'\t' -k1,1nr -k3,3nr | cut -f2-
+
+} > $summary_file".sorted"
+
+rm $summary_file
+mv $summary_file".sorted" $summary_file
+
+echo "Populating primary_all alignment file: $(date '+%Y-%m-%d %H:%M:%S')"
+# grab all primary alignments
+run_with_retry  \
+	"
+	$sqlite_pragmas
+    SELECT *
+    FROM sam_complete
+	WHERE tp_tag = 'tp:A:P'
+	" | awk -F'\t' -v OFS='\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15}' | awk -F'\t' -v OFS='\t' '
+	{
+		line = $1
+		for (i = 2; i <= 11; i++) {
+			line = line OFS $i
+		}
+		for (i = 12; i <= NF; i++) {
+			if ($i != "") {
+				line = line OFS $i
+			}
+		}
+		print line
+	}' >> $primary_all
+
+echo "Populating primary_unambiguous alignment file: $(date '+%Y-%m-%d %H:%M:%S')"
+# grab all nonambiguous primary alignments
+run_with_retry  \
+	"
+	$sqlite_pragmas
+    SELECT *
+    FROM sam_complete
+	WHERE tp_tag = 'tp:A:P' and read_id IN (
+		SELECT read_id
+		FROM unambiguous_pairs
+	)
+	" | awk -F'\t' -v OFS='\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15}' | awk -F'\t' -v OFS='\t' '
+	{
+		line = $1
+		for (i = 2; i <= 11; i++) {
+			line = line OFS $i
+		}
+		for (i = 12; i <= NF; i++) {
+			if ($i != "") {
+				line = line OFS $i
+			}
+		}
+		print line
+	}' >> $primary_unambiguous
+
+echo "Populating primary_ambig_single alignment file: $(date '+%Y-%m-%d %H:%M:%S')"
+# grab all primary ambiguous single genome hits
+run_with_retry  \
+	"
+	$sqlite_pragmas
+    SELECT *
+    FROM sam_complete
+	WHERE tp_tag = 'tp:A:P' and read_id IN (
+		SELECT read_id
+		FROM ambiguous_single_genome_pairs
+	)
+	" | awk -F'\t' -v OFS='\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15}' | awk -F'\t' -v OFS='\t' '
+	{
+		line = $1
+		for (i = 2; i <= 11; i++) {
+			line = line OFS $i
+		}
+		for (i = 12; i <= NF; i++) {
+			if ($i != "") {
+				line = line OFS $i
+			}
+		}
+		print line
+	}' >> $primary_ambiguous_single_genome
+
+echo "Populating primary_ambig_multi alignment file: $(date '+%Y-%m-%d %H:%M:%S')"
+# grab all primary ambiguous multi-genome hits
+run_with_retry  \
+	"
+	$sqlite_pragmas
+    SELECT *
+    FROM sam_complete
+	WHERE tp_tag = 'tp:A:P' and read_id IN (
+		SELECT read_id
+		FROM ambiguous_multi_genome_pairs
+	) 
+	" | awk -F'\t' -v OFS='\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15}' | awk -F'\t' -v OFS='\t' '
+	{
+		line = $1
+		for (i = 2; i <= 11; i++) {
+			line = line OFS $i
+		}
+		for (i = 12; i <= NF; i++) {
+			if ($i != "") {
+				line = line OFS $i
+			}
+		}
+		print line
+	}' >> $primary_ambiguous_multi_genome
+
+echo "Populating unmapped alignment file: $(date '+%Y-%m-%d %H:%M:%S')"
+# grab all unmapped reads - unmapped reads will often contain empty aux fields so we need to remove trailing tab characters from the SQL query
+run_with_retry  \
+	"
+	$sqlite_pragmas
+    SELECT *
+    FROM sam_complete
+	WHERE read_id IN (
+		SELECT read_id
+		FROM unmapped_pairs
+	) 
+	" | awk -F'\t' -v OFS='\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15}' | awk -F'\t' -v OFS='\t' '
+	{
+		line = $1
+		for (i = 2; i <= 11; i++) {
+			line = line OFS $i
+		}
+		for (i = 12; i <= NF; i++) {
+			if ($i != "") {
+				line = line OFS $i
+			}
+		}
+		print line
+	}' >> $unmapped
+
+#############################################################################################
+#############################################################################################
+#############################################################################################
+
+echo "Formatting all primary output BAM file: $(date '+%Y-%m-%d %H:%M:%S')"
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $primary_all > $prefix-primary-all.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary-all.bam > $prefix-primary_all_sorted.bam
+rm -f $prefix-primary-all.bam
+
+echo "Formatting primary unambiguous single genome output BAM file"
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $primary_unambiguous > $prefix-primary-unambiguous.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary-unambiguous.bam > $prefix-primary_unambiguous_sorted.bam
+rm -f $prefix-primary-unambiguous.bam
+
+echo "Formatting primary ambiguous single genome output BAM file: $(date '+%Y-%m-%d %H:%M:%S')"
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $primary_ambiguous_single_genome > $prefix-primary_ambiguous_single_genome.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary_ambiguous_single_genome.bam > $prefix-primary_ambiguous_single_genome_sorted.bam
+rm -f $prefix-primary_ambiguous_single_genome.bam
+
+echo "Formatting primary ambiguous multi genome output BAM file: $(date '+%Y-%m-%d %H:%M:%S')"
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $primary_ambiguous_multi_genome > $prefix-primary_ambiguous_multi_genome.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary_ambiguous_multi_genome.bam > $prefix-primary_ambiguous_multi_genome_sorted.bam
+rm -f $prefix-primary_ambiguous_multi_genome.bam
+
+echo "Formatting Unmapped output BAM file: $(date '+%Y-%m-%d %H:%M:%S')"
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $unmapped > $prefix-unmapped.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-unmapped.bam > $prefix-unmapped-sorted.bam
+rm -f $prefix-unmapped.bam
+
+# cleaning up temporary files
+rm -f $prefix-chunk_*
+rm -f $prefix-part-* 
+rm -f sam_chunk*
+rm -f *.sam
+rm -f $prefix-ambig.*

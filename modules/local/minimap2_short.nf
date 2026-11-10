@@ -1,7 +1,7 @@
 process ALIGN_SHORT_READS_MINIMAP2 {
     tag "$meta.id"
-    label 'process_medium'
-    errorStrategy 'ignore'
+    label 'process_high_memory'
+	label 'error_retry'
 
     // Note: the versions here need to match the versions used in the mulled container below and minimap2/index
     conda "${moduleDir}/environment.yml"
@@ -29,12 +29,18 @@ process ALIGN_SHORT_READS_MINIMAP2 {
     def bam_output = " | samtools sort -@ ${task.cpus-1} -o ${prefix}.bam ${args2}"
     """
     if ${params.memory_saver}; then
+
+        rm -f ${projectDir}/queue/minimap2/$prefix-minimap2
+    
+    fi
+
+    if ${params.memory_saver}; then
     
         start="false"
 
         while [[ \$start == "false" ]]; do
 
-            if [[ \$(ls ${projectDir}/queue/minimap2 | wc -l) -gt 1 ]]; then
+            if [[ \$(ls ${projectDir}/queue/minimap2 | wc -l) -eq 1 ]]; then
 
                 sleep 5
             
@@ -48,10 +54,17 @@ process ALIGN_SHORT_READS_MINIMAP2 {
         done
     fi
 
+    if [[ ${reference} == *".mmi" ]]; then
 
-    minimap2 \\
-        --sr $args -a ${reference} ${reads} \\
-        $bam_output
+        minimap2 \\
+            -t $task.cpus $args -a ${reference} ${reads} | samtools sort -@ ${task.cpus-1} -o ${prefix}.bam
+    
+    else
+
+        minimap2 \\
+            -t $task.cpus -ax sr ${reference} ${reads} | samtools sort -@ ${task.cpus-1} -o ${prefix}.bam     
+
+    fi
 
 
     cat <<-END_VERSIONS > versions.yml

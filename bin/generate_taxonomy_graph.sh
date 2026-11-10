@@ -7,9 +7,10 @@ prefix=$1
 alignment_report=$2
 rscript=$3
 data_type=$4
+skip_id_filter=$5
+total_reads=$6
+cov_tsv=$7
 
-input_tsv="$prefix-rscript-input.csv"
-
-singularity exec --bind $bind_dir $R_CONTAINER Rscript $rscript $alignment_report "$(pwd)" $prefix $data_type
+singularity exec --bind $bind_dir $R_CONTAINER Rscript $rscript $alignment_report "$(pwd)" $prefix "$data_type" $skip_id_filter $total_reads $cov_tsv
 
 mv plot.png $prefix-taxonomic-distribution-plot_mqc.png

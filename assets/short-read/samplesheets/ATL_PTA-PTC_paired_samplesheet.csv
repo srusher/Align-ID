@@ -1,9 +1,0 @@
-sample,fastq_1,fastq_2
-PTA-Lig1,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTA-Lig1_S2_L001_R1_001.fastq.gz,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTA-Lig1_S2_L001_R2_001.fastq.gz
-PTA-Lig2,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTA-Lig2_S4_L001_R1_001.fastq.gz,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTA-Lig2_S4_L001_R2_001.fastq.gz
-PTA-Lig3,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTA-Lig3_S6_L001_R1_001.fastq.gz,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTA-Lig3_S6_L001_R2_001.fastq.gz
-PTA-Lig4,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTA-Lig4_S10_L001_R1_001.fastq.gz,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTA-Lig4_S10_L001_R2_001.fastq.gz
-PTC-Lig1,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTC-Lig1_S3_L001_R1_001.fastq.gz,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTC-Lig1_S3_L001_R2_001.fastq.gz
-PTC-Lig2,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTC-Lig2_S5_L001_R1_001.fastq.gz,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTC-Lig2_S5_L001_R2_001.fastq.gz
-PTC-Lig3,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTC-Lig3_S7_L001_R1_001.fastq.gz,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTC-Lig3_S7_L001_R2_001.fastq.gz
-PTC-Lig4,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTC-Lig4_S11_L001_R1_001.fastq.gz,/scicomp/groups-pure/WDPB/EMEL/Projects/Amoeba_Sequencing/NM_PT_SR/PTC-Lig4_S11_L001_R2_001.fastq.gz

@@ -19,7 +19,7 @@ if [ $workflow == "short" ]; then
         -m abe \
         -q all.q \
         -pe smp 8 \
-        -l h_vmem=40G \
+        -l h_vmem=50G \
         -cwd \
         -o $SCRIPTDIR/qsub_logs \
         -e $SCRIPTDIR/qsub_logs/Align-ID_short_$USER'_'$DATETIME'_error.log' \
@@ -33,7 +33,7 @@ elif [ $workflow == "long" ]; then
         -m abe \
         -q all.q \
         -pe smp 8 \
-        -l h_vmem=40G \
+        -l h_vmem=50G \
         -cwd \
         -o $SCRIPTDIR/qsub_logs \
         -e $SCRIPTDIR/qsub_logs/Align-ID_long_$USER'_'$DATETIME'_error.log' \

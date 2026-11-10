@@ -18,6 +18,15 @@ primary_ambiguous_single_genome="$prefix-primary_ambiguous_single_genome.sam"
 primary_ambiguous_multi_genome="$prefix-primary_ambiguous_multi_genome.sam"
 unmapped="$prefix-unmapped.sam"
 
+cur_dir="$(pwd)"
+
+sqlite_pragmas="
+PRAGMA cache_size = -500000;
+PRAGMA temp_store_directory = '$cur_dir';
+PRAGMA journal_mode = WAL;
+PRAGMA synchronous = NORMAL;
+"
+
 echo "Parsing BAM headers"
 
 # printing bam headers to all primary alignment output sam files
@@ -35,24 +44,30 @@ singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -H $bam >
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS total_read_pairs;
 	CREATE TABLE total_read_pairs (num_reads FLOAT);
 	"
 
+echo "Calculating total read pairs: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO total_read_pairs
 	SELECT COUNT(read_id) / 2
 	FROM sam_complete
-	WHERE tp_tag != 'tp:A:S'
+	WHERE tp_tag != 'tp:A:S';
 	"
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS unmapped_pairs;
 	CREATE TABLE unmapped_pairs (read_id TEXT, r1_flag INTEGER, r2_flag INTEGER, ref_id TEXT, mapq INTEGER);
 	"
 
+echo "Populating unmapped pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO unmapped_pairs
 	SELECT read_id, MIN(flag), MAX(flag), ref_id, mapq
 	FROM sam_complete
@@ -62,11 +77,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS r1_reads;
 	CREATE TABLE r1_reads (read_id TEXT, r1_flag INTEGER, r1_ref_id TEXT, r1_tax_id TEXT, r1_mapq INTEGER, r1_p_next INTEGER, r1_as_tag INTEGER);
 	"
 
+echo "Populating r1-reads table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO r1_reads
 	SELECT read_id, MIN(flag), ref_id, tax_map.tax_id, mapq, p_next, as_tag
 	FROM sam_complete
@@ -77,11 +95,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS r2_reads;
 	CREATE TABLE r2_reads (read_id TEXT, r2_flag INTEGER, r2_ref_id TEXT, r2_tax_id TEXT, r2_mapq INTEGER, r2_p_next INTEGER, r2_as_tag INTEGER);
 	"
 
+echo "Populating r2-reads table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO r2_reads
 	SELECT read_id, MAX(flag), ref_id, tax_map.tax_id, mapq, p_next, as_tag
 	FROM sam_complete
@@ -92,11 +113,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS mapped_pairs;
 	CREATE TABLE mapped_pairs (read_id TEXT, r1_flag INTEGER, r2_flag INTEGER, r1_ref_id TEXT, r2_ref_id TEXT, r1_tax_id TEXT, r2_tax_id TEXT, r1_mapq INTEGER, r2_mapq INTEGER, r1_p_next INTEGER, r2_p_next INTEGER, r1_as_tag INTEGER, r2_as_tag INTEGER);
 	"
 
+echo "Populating mapped_pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO mapped_pairs
 	SELECT r1.read_id, r1.r1_flag, r2.r2_flag, r1.r1_ref_id, r2.r2_ref_id, r1.r1_tax_id, r2.r2_tax_id, r1.r1_mapq, r2.r2_mapq, r1.r1_p_next, r2.r2_p_next, r1.r1_as_tag, r2.r2_as_tag
 	FROM r1_reads as r1
@@ -107,6 +131,7 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 # mapped_pairs table may contain read pairs where one mate is unmapped while the other is mapped - here we are converting their reference ID and tax ID to unclassified
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	UPDATE mapped_pairs
 	SET r1_tax_id = 'unclassified'
 	WHERE r1_ref_id = 'unclassified' and r1_tax_id IS NULL;
@@ -118,11 +143,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS top_secondary_mappings;
 	CREATE TABLE top_secondary_mappings (read_id TEXT, sec_tax_id TEXT, sec_p_next INTEGER, sec_as_tag INTEGER);
 	"
 
+echo "Populating top_secondary_mappings table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO top_secondary_mappings
 	SELECT read_id, tax_map.tax_id as tax_id, p_next, MAX(as_tag) as as_tag
 	FROM sam_complete
@@ -133,11 +161,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS top_secondary_mappings_taxa_count;
 	CREATE TABLE top_secondary_mappings_taxa_count (read_id TEXT, taxa_count INTEGER);
 	"
 
+echo "Populating top_secondary_mappings_taxa_count table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO top_secondary_mappings_taxa_count
 	SELECT read_id, COUNT(DISTINCT sec_tax_id) as taxa_count
 	FROM top_secondary_mappings
@@ -146,11 +177,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS secondary_mapping_aggregate;
 	CREATE TABLE secondary_mapping_aggregate (read_id TEXT, sec_tax_id TEXT, sec_p_next INTEGER, sec_as_tag INTEGER, sec_taxa_count INTEGER);
 	"
 
+echo "Populating secondary_mapping_aggregate table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO secondary_mapping_aggregate
 	SELECT top_secondary_mappings.read_id, top_secondary_mappings.sec_tax_id, top_secondary_mappings.sec_p_next, top_secondary_mappings.sec_as_tag, top_secondary_mappings_taxa_count.taxa_count
 	FROM top_secondary_mappings
@@ -159,11 +193,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS unambiguous_pairs;
 	CREATE TABLE unambiguous_pairs (read_id TEXT, r1_flag INTEGER, r2_flag INTEGER, r1_ref_id TEXT, r2_ref_id TEXT, r1_tax_id TEXT, r2_tax_id TEXT, r1_mapq INTEGER, r2_mapq INTEGER, r1_p_next INTEGER, r2_p_next INTEGER, r1_as_tag INTEGER, r2_as_tag INTEGER);
 	"
 
+echo "Populating unambiguous_pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO unambiguous_pairs
 	SELECT *
 	FROM mapped_pairs
@@ -172,11 +209,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS ambiguous_single_genome_pairs;
 	CREATE TABLE ambiguous_single_genome_pairs (read_id TEXT, r1_tax_id TEXT, r2_tax_id TEXT, r1_mapq INTEGER, r2_mapq INTEGER, sec_tax_id TEXT, sec_taxa_count INTEGER);
 	"
 
+echo "Populating ambiguous_single_genome_pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO ambiguous_single_genome_pairs
 	SELECT mp.read_id, mp.r1_tax_id, mp.r2_tax_id, mp.r1_mapq, mp.r2_mapq, sma.sec_tax_id, sma.sec_taxa_count
 	FROM mapped_pairs as mp
@@ -219,11 +259,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS ambiguous_multi_genome_pairs;
 	CREATE TABLE ambiguous_multi_genome_pairs (read_id TEXT, r1_tax_id TEXT, r2_tax_id TEXT, r1_mapq INTEGER, r2_mapq INTEGER, r1_as_tag INTEGER, r2_as_tag INTEGER);
 	"
 
+echo "Populating ambiguous_multi_genome_pairs table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO ambiguous_multi_genome_pairs
 	SELECT mp.read_id, mp.r1_tax_id, mp.r2_tax_id, mp.r1_mapq, mp.r2_mapq, mp.r1_as_tag, mp.r2_as_tag
 	FROM mapped_pairs as mp
@@ -240,11 +283,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS unambiguous_hits_by_taxid;
 	CREATE TABLE unambiguous_hits_by_taxid (prim_tax_id TEXT, total_hits);
 	"
 
+echo "Populating unambiguous_hits_by_taxid table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
     INSERT INTO unambiguous_hits_by_taxid
 	SELECT r1_tax_id, COUNT(DISTINCT read_id)
 	FROM unambiguous_pairs
@@ -253,12 +299,15 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS ambiguous_single_genome_hits_by_taxid;
 	CREATE TABLE ambiguous_single_genome_hits_by_taxid (prim_tax_id TEXT, total_hits);
 	"
 
+echo "Populating ambiguous_single_genome_hits_by_taxid table: $(date '+%Y-%m-%d %H:%M:%S')"
 # for single genome ambiguous pairs we need to make sure the primary tax ID is set to the tax ID of the mate that is NOT 'unclassified' when applicable
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO ambiguous_single_genome_hits_by_taxid
 	SELECT q1.prim_tax_id, COUNT(q1.prim_tax_id)
 	FROM (
@@ -277,11 +326,14 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	DROP TABLE IF EXISTS ambiguous_multi_genome_hits_by_taxid;
 	CREATE TABLE ambiguous_multi_genome_hits_by_taxid (prim_tax_id TEXT, total_hits);
 	"
 
+echo "Populating ambiguous_multi_genome_hits_by_taxid table: $(date '+%Y-%m-%d %H:%M:%S')"
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
 	INSERT INTO ambiguous_multi_genome_hits_by_taxid
 	SELECT q1.prim_tax_id, COUNT(q1.prim_tax_id)
 	FROM (
@@ -306,6 +358,7 @@ echo -e "species\tnum_reads\tpercent_reads\tambiguity" > "$summary_file"
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
     SELECT unmapped_pairs.ref_id, COUNT(unmapped_pairs.read_id), ROUND(COUNT(unmapped_pairs.read_id) / total_read_pairs.num_reads * 100,6) as percentage
     FROM unmapped_pairs
 	LEFT JOIN total_read_pairs
@@ -314,6 +367,7 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
     SELECT unambiguous_hits_by_taxid.prim_tax_id, unambiguous_hits_by_taxid.total_hits, ROUND(unambiguous_hits_by_taxid.total_hits / total_read_pairs.num_reads * 100,6) as percentage
     FROM unambiguous_hits_by_taxid
 	LEFT JOIN total_read_pairs
@@ -322,6 +376,7 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
     SELECT ambiguous_single_genome_hits_by_taxid.prim_tax_id, ambiguous_single_genome_hits_by_taxid.total_hits, ROUND(ambiguous_single_genome_hits_by_taxid.total_hits / total_read_pairs.num_reads * 100,6) as percentage
     FROM ambiguous_single_genome_hits_by_taxid
 	LEFT JOIN total_read_pairs
@@ -330,6 +385,7 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db \
 	"
+	$sqlite_pragmas
     SELECT ambiguous_multi_genome_hits_by_taxid.prim_tax_id, ambiguous_multi_genome_hits_by_taxid.total_hits, ROUND(ambiguous_multi_genome_hits_by_taxid.total_hits / total_read_pairs.num_reads * 100,6) as percentage
     FROM ambiguous_multi_genome_hits_by_taxid
 	LEFT JOIN total_read_pairs
@@ -350,11 +406,12 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 
 	tax_id=$(echo "$line" | cut -f1)
 
+	# if the tax_id var contains letters then it is most likely a nonstandard reference (or it wasn't included in the taxonomy map) and we don't want to try and look this up in the names.dmp file - same logic applies to unclassified / unmapped reads
 	if [[ $tax_id == "unclassified" ]]; then
 
 		continue
-	
-	elif [[ "$tax_id" =~ [a-zA-Z] ]]; then # if the tax_id var contains letters then it is most likely a nonstandard reference (or it wasn't included in the taxonomy map) and we don't want to try and look this up in the names.dmp file
+		
+	elif [[ "$tax_id" =~ [a-zA-Z] ]]; then
 
 		continue
 
@@ -367,9 +424,26 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 
 done < "$summary_file"
 
+# reordering summary file to list classifications from highest read count to lowest and to group by species
+{
+
+  head -n 1 $summary_file
+  tail -n +2 $summary_file | awk -F'\t' '
+    { total[$1]+=$2 }
+    { rows[NR]=$0; sp[NR]=$1 }
+    END {
+      for (i=1;i<=NR;i++) print total[sp[i]]"\t"rows[i]
+    }' | sort -t$'\t' -k1,1nr -k3,3nr | cut -f2-
+
+} > $summary_file".sorted"
+
+rm $summary_file
+mv $summary_file".sorted" $summary_file
+
 # grab all primary alignments
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separator '!##########!'" \
 	"
+	$sqlite_pragmas
     SELECT *
     FROM sam_complete
 	WHERE tp_tag = 'tp:A:P' and read_id IN (
@@ -381,6 +455,7 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separa
 # grab all nonambiguous primary alignments
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separator '!##########!'" \
 	"
+	$sqlite_pragmas
     SELECT *
     FROM sam_complete
 	WHERE tp_tag = 'tp:A:P' and read_id IN (
@@ -392,6 +467,7 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separa
 # grab all primary ambiguous single genome hits
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separator '!##########!'" \
 	"
+	$sqlite_pragmas
     SELECT *
     FROM sam_complete
 	WHERE tp_tag = 'tp:A:P' and read_id IN (
@@ -403,6 +479,7 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separa
 # grab all primary ambiguous multi-genome hits
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separator '!##########!'" \
 	"
+	$sqlite_pragmas
     SELECT *
     FROM sam_complete
 	WHERE tp_tag = 'tp:A:P' and read_id IN (
@@ -414,6 +491,7 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separa
 # grab all unmapped reads - unmapped reads will often contain empty aux fields so we need to remove trailing tab characters from the SQL query
 singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separator '!##########!'" \
 	"
+	$sqlite_pragmas
     SELECT *
     FROM sam_complete
 	WHERE read_id IN (
@@ -428,29 +506,30 @@ singularity -q exec --bind $bind_dir $SQLITE3_CONTAINER sqlite3 $sam_db ".separa
 #############################################################################################
 
 echo "Formatting all primary output BAM file"
-singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_all > $prefix-primary-all.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $primary_all > $prefix-primary-all.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary-all.bam > $prefix-primary-all-sorted.bam
 rm -f $prefix-primary-all.bam
 
 echo "Formatting primary unambiguous single genome output BAM file"
-singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_unambiguous > $prefix-primary-unambiguous.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $primary_unambiguous > $prefix-primary-unambiguous.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary-unambiguous.bam > $prefix-primary-unambiguous-sorted.bam
 rm -f $prefix-primary-unambiguous.bam
 
 echo "Formatting primary ambiguous single genome output BAM file"
-singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_ambiguous_single_genome > $prefix-primary_ambiguous_single_genome.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $primary_ambiguous_single_genome > $prefix-primary_ambiguous_single_genome.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary_ambiguous_single_genome.bam > $prefix-primary_ambiguous_single_genome-sorted.bam
 rm -f $prefix-primary_ambiguous_single_genome.bam
 
 echo "Formatting primary ambiguous multi genome output BAM file"
-singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $primary_ambiguous_multi_genome > $prefix-primary_ambiguous_multi_genome.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $primary_ambiguous_multi_genome > $prefix-primary_ambiguous_multi_genome.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-primary_ambiguous_multi_genome.bam > $prefix-primary_ambiguous_multi_genome-sorted.bam
 rm -f $prefix-primary_ambiguous_multi_genome.bam
 
 echo "Formatting Unmapped output BAM file"
-singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view -@ 16 -b $unmapped > $prefix-unmapped.bam
+singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view --verbosity 0 -@ 16 -b $unmapped > $prefix-unmapped.bam
 singularity -q exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools sort $prefix-unmapped.bam > $prefix-unmapped-sorted.bam
 rm -f $prefix-unmapped.bam
+
 
 # cleaning up temporary files
 rm -f $prefix-chunk_*

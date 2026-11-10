@@ -1,5 +1,5 @@
 process SAMPLESHEET_CHECK {
-    tag "$samplesheet"
+    tag "${samplesheet.baseName}"
     label 'process_single'
 
     conda "conda-forge::python=3.8.3"
@@ -9,6 +9,7 @@ process SAMPLESHEET_CHECK {
 
     input:
     path samplesheet
+    val complete
 
     output:
     path '*.csv'       , emit: csv
