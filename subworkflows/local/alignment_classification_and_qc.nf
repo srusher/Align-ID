@@ -175,28 +175,28 @@ workflow ALIGNMENT_CLASSIFICATION_AND_QC {
 
 	filtered_reads = SAMTOOLS_FASTQ_MAPPED.out.fastq
 
-	if (params.workflow == 'short-read') {
+	// if (params.workflow == 'short-read') {
 
-		FASTQC_ALIGNED_FILTERED (
+	// 	FASTQC_ALIGNED_FILTERED (
 
-			filtered_reads
+	// 		filtered_reads
 
-		)
+	// 	)
 
-		//ch_multiqc_files = ch_multiqc_files.mix(FASTQC_ALIGNED_FILTERED.out.zip.collect {it[1]}.ifEmpty([]))
+	// 	//ch_multiqc_files = ch_multiqc_files.mix(FASTQC_ALIGNED_FILTERED.out.zip.collect {it[1]}.ifEmpty([]))
 
-	} else if (params.workflow == 'long-read') {
+	// } else if (params.workflow == 'long-read') {
 
-		// running nanoplot again to compare read stats pre and post filter
-        NANOPLOT_ALIGNMENT_TAXON_FILTERED (
+	// 	// running nanoplot again to compare read stats pre and post filter
+    //     NANOPLOT_ALIGNMENT_TAXON_FILTERED (
 
-            filtered_reads
+    //         filtered_reads
 
-        )
+    //     )
 
-		//ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT_ALIGNMENT_TAXON_FILTERED.out.txt.collect{it[1]}.ifEmpty([]))
+	// 	//ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT_ALIGNMENT_TAXON_FILTERED.out.txt.collect{it[1]}.ifEmpty([]))
 
-	}
+	// }
 
 
 	emit:

@@ -1,52 +1,50 @@
 ## Align-ID Workflow Diagram
-![Align-ID workflow diagram](docs/images/workflow_diagram.PNG)
+![Align-ID workflow diagram](docs/images/align-id-workflow.png)
 
 ## Summary
 
-**Align-ID** is a SQL optimized, metagenomic classification workflow that utilizes a competative-alignment approach to assign taxonomy to Oxford Nanopore and Illumina sequencing reads. This workflow houses two separate analysis pipelines for long read and short read data sets:
+**Align-ID** is a SQL optimized, metagenomic classification workflow that relies on competitive alignments against a large, curated reference database to assign taxonomy to Oxford Nanopore and Illumina sequencing reads. In addition to identifying the taxa present in a sample, Align-ID provides a breakdown of read mapping ambiguity by taxon, distinguishing uniquely mapped reads from reads that map ambiguously to conserved regions shared across genomes. The workflow takes a fastq samplesheet as input and houses two separate QC pipelines for long read and short read data sets, which then converge on a shared alignment, classification, and reporting workflow.
 
-**Long Read ID**
-1. _OPTIONAL_: Subsampling ([`BBMap`](https://github.com/BioInfoTools/BBMap))
+## QC and Trimming
 
-2. Long read QC: 
-     - Read Statistics/Summary ([`Nanoplot`](https://github.com/wdecoster/NanoPlot))
-     - _OPTIONAL_: Adapter trimming ([`Porechop`](https://github.com/rrwick/Porechop))
-     - Quality and Length Filtering ([`Chopper`](https://github.com/wdecoster/chopper))
+**Long Read QC**
+1. Quality and Length Filtering ([`Chopper`](https://github.com/wdecoster/chopper))
+2. Adapter Trimming ([`cutadapt`](https://github.com/marcelm/cutadapt))
+3. Read Statistics/Summary ([`NanoPlot`](https://github.com/wdecoster/NanoPlot)), with results passed to MultiQC
 
-3. Read Alignment ([`minimap2`](https://github.com/lh3/minimap2))
+**Short Read QC**
+1. Adapter, Length, and Quality Trimming ([`Trimmomatic`](http://www.usadellab.org/cms/?page=trimmomatic))
+2. _OPTIONAL_: Read Merging ([`BBMerge`](https://github.com/BioInfoTools/BBMap))
+3. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)), with results passed to MultiQC
 
-4. Read Alignment-based Classification (custom modules plus [`samtools`](https://www.htslib.org/doc/samtools.html))
+## Shared Workflow (Long and Short Reads)
 
-     - _OPTIONAL_: alignment filtering by taxonomic ID (custom module)
-     - _OPTIONAL_: alignment filtering by mapping quality (custom module)
+**1. Alignment**
 
-5. Read Taxonomic Distribution Graph (custom module)
+Semi-global read alignment ([`minimap2`](https://github.com/lh3/minimap2)) against a large multi-genome reference database. Alignments are passed on to both the Taxonomic Classification and SAM Stats and Postprocessing stages.
 
-6. Alignment Statistics and Post-processing ([`samtools`](https://www.htslib.org/doc/samtools.html))
+**2. Taxonomic Classification**
 
-7. Workflow Summary ([`MultiQC`](https://github.com/MultiQC/MultiQC))
+1. Import SAM to Database
+2. Taxonomy Mapping (acc. ID → tax ID → name)
+3. _OPTIONAL_: Taxonomic ID Filter
+4. Ambiguity Binning
+5. Report generation, which takes the binned results plus the `samtools` coverage output:
+     - Taxonomy Text Report
+     - Taxonomy Graph
 
+**3. SAM Stats and Postprocessing**
 
-**Short Read ID**
-1. _OPTIONAL_: Subsampling ([`BBMap`](https://github.com/BioInfoTools/BBMap))
+Alignment statistics and postprocessing ([`samtools`](https://www.htslib.org/doc/samtools.html)):
+- `stats` (passed to MultiQC)
+- `sort`
+- `index`
+- `coverage` (passed to the Taxonomy Text Report and Taxonomy Graph steps)
+- `depth`
 
-2. Short read QC:     
-     - Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
-     - Adapter Trimming, Quality Filtering, and Length Filtering ([`trimmomatic`](http://www.usadellab.org/cms/?page=trimmomatic) or [`fastp`](https://github.com/OpenGene/fastp))
-     - _OPTIONAL_: Read Merging ([`BBMap`](https://github.com/BioInfoTools/BBMap))
-
-3. Read Alignment ([`minimap2`](https://github.com/lh3/minimap2))
-
-4. Read Alignment-based Classification (custom modules plus [`samtools`](https://www.htslib.org/doc/samtools.html))
-
-     - _OPTIONAL_: alignment filtering by taxonomic ID (custom module)
-     - _OPTIONAL_: alignment filtering by mapping quality (custom module)
-
-5. Read Taxonomic Distribution Graph (custom module)
-
-6. Alignment Statistics and Post-processing ([`samtools`](https://www.htslib.org/doc/samtools.html))
-
-7. Workflow Summary ([`MultiQC`](https://github.com/MultiQC/MultiQC))
+**4. Reporting**
+1. Taxonomy Report: the text and graph outputs are merged into a single report
+2. Workflow Summary ([`MultiQC`](https://github.com/MultiQC/MultiQC)), reported separately from the Taxonomy Report
 
 
 ## Installation

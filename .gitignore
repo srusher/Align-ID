@@ -15,7 +15,15 @@ assets/short-read/samplesheets/*
 assets/long-read/samplesheets/*
 !.gitkeep
 
-!samplesheet_merged.csv
-!samplesheet_paired.csv
-!samplesheet.csv
-!TGS_EMEL_sequenced_1.csv
+# re-include the subdirectories so git looks inside them
+!assets/short-read/samplesheets/template/
+!assets/short-read/samplesheets/tgs/
+!assets/long-read/samplesheets/template/
+
+# keep everything else in those dirs ignored, except the specific files
+assets/short-read/samplesheets/tgs/*
+!assets/short-read/samplesheets/tgs/TGS_EMEL_sequenced_1.csv
+
+!assets/short-read/samplesheets/template/samplesheet_merged.csv
+!assets/short-read/samplesheets/template/samplesheet_paired.csv
+!assets/long-read/samplesheets/template/samplesheet.csv
