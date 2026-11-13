@@ -11,11 +11,12 @@ headcrop=$5
 tailcrop=$6
 which_reads=$7
 template_seqs=$8
-reads=$9
+r1=$9
+r2=${10}
 
-echo $reads
-r1=$(echo $reads | cut -d ' ' -f1)
-r2=$(echo $reads | cut -d ' ' -f2)
+# echo $reads
+# r1=$(echo $reads | cut -d ' ' -f1)
+# r2=$(echo $reads | cut -d ' ' -f2)
 
 if [[ $mode == 'fixed-length' ]]; then
 
@@ -23,7 +24,9 @@ if [[ $mode == 'fixed-length' ]]; then
 
 		singularity -q exec --bind $bind_dir $PYTHON_CONTAINER python $python_script --fastq $r1 --read-type forward --headcrop $headcrop --tailcrop $tailcrop --output $prefix'_manual_trim_r1.fastq'
 
-	elif [[ $which_reads == 'r2' || $which_reads == 'both' ]]; then
+	fi
+
+	if [[ $which_reads == 'r2' || $which_reads == 'both' ]]; then
 
 		singularity -q exec --bind $bind_dir $PYTHON_CONTAINER python $python_script --fastq $r2 --read-type reverse --headcrop $headcrop --tailcrop $tailcrop --output $prefix'_manual_trim_r2.fastq'
 
@@ -35,7 +38,9 @@ elif [[ $mode == 'seq-match' ]]; then
 
 		singularity -q exec --bind $bind_dir $PYTHON_CONTAINER python $python_script --fastq $r1 --read-type forward --sequences $template_seqs --output $prefix'_manual_trim_r1.fastq'	
 
-	elif [[ $which_reads == 'r2' || $which_reads == 'both' ]]; then
+	fi
+
+	if [[ $which_reads == 'r2' || $which_reads == 'both' ]]; then
 
 		singularity -q exec --bind $bind_dir $PYTHON_CONTAINER python $python_script --fastq $r2 --read-type reverse --sequences $template_seqs --output $prefix'_manual_trim_r2.fastq'
 

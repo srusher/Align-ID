@@ -64,6 +64,8 @@ def build_seqid2taxid_dict(nucl_gb_seqid2taxid):
 
 	seqid2taxid_dict = {}
 
+	seqid2taxid_dict['NC_002058'] = '12081'
+
 	with open(nucl_gb_seqid2taxid, 'r') as f:
 
 		for line in f:
@@ -148,7 +150,7 @@ def extract_accessions(fasta_path, name_dict, tax_id_dict, seqid2taxid_dict):
 
 							if name in name_dict or name.lower() in names_list_lower:
 
-								accessions.append(f"{accession}\t{name_dict[name]}\t{name.capitalize()}")
+								accessions.append(f"{accession}\t{name_dict[name]}\t{name}")
 								found = True
 								break					
 					

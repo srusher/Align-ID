@@ -98,7 +98,7 @@ workflow ALIGNMENT_CLASSIFICATION_AND_QC {
 	if (!params.skip_blast_unmapped) {
 
 		BLAST_UNMAPPED_READS (
-			ALIGNMENT_CLASSIFY.out.unmapped_bam,
+			aligner_bam_ch,
 			params.blast_db
 		)
 

@@ -47,7 +47,7 @@ rm taxdump.tar.gz
 
 rm citations.dmp merged.dmp delnodes.dmp division.dmp gencode.dmp images.dmp readme.txt gc.prt
 
-seqid2taxid_map=$tax_dir/seqid2taxid.map
+seqid2taxid_map=$tax_dir/nucl_gb_seqid2taxid.map
 tax_db="$tax_dir/tax_map.db"
 
 # removing header row from file

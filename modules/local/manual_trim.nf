@@ -11,17 +11,18 @@ process MANUAL_TRIM {
     when:
     task.ext.when == null || task.ext.when
 
-    script:
-    def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
-	def seqs = "${params.man_trim_seqs}" ?: "placeholder"
-	def headcrop = "${params.man_trim_headcrop}" ?: "0"
-	def tailcrop = "${params.man_trim_tailcrop}" ?: "0"
-	def which_reads = "${params.man_trim_reads}" ?: "r1"
+	script:
+	def prefix 	  = "${meta.id}"
+	def seqs      = params.man_trim_seqs      ?: 'placeholder'
+	def headcrop  = params.man_trim_headcrop  ?: 0
+	def tailcrop  = params.man_trim_tailcrop  ?: 0
+	def which     = meta.single_end ? 'r1' : (params.man_trim_reads ?: 'r1')
+	def r1 = reads[0]
+	def r2 = meta.single_end ? 'NA' : reads[1]
 
 	"""
 
-	bash "${projectDir}/bin/manual_trim.sh" $prefix "${meta.single_end}" "${projectDir}/bin/manual_trim.py" ${params.man_trim_mode} $headcrop $tailcrop $which_reads $seqs $reads
+	bash "${projectDir}/bin/manual_trim.sh" $prefix ${meta.single_end} "${projectDir}/bin/manual_trim.py" ${params.man_trim_mode} $headcrop $tailcrop $which $seqs $r1 $r2
 
 	"""
 

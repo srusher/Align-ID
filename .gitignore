@@ -14,6 +14,8 @@ assets/taxonomy/*
 assets/short-read/samplesheets/*
 assets/long-read/samplesheets/*
 !.gitkeep
-!assets/short-read/samplesheets/samplesheet_merged.csv
-!assets/short-read/samplesheets/samplesheet_paired.csv
-!assets/long-read/samplesheets/samplesheet.csv
+
+!assets/short-read/samplesheets/template/samplesheet_merged.csv
+!assets/short-read/samplesheets/template/samplesheet_paired.csv
+!assets/long-read/samplesheets/template/samplesheet.csv
+!assets/short-read/samplesheets/tgs/TGS_EMEL_sequenced_1.csv

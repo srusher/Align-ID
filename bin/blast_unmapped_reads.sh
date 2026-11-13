@@ -12,7 +12,11 @@ blast_evalue=$5
 blast_perc_identity=$6
 blast_target_seqs=$7
 
-singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools fasta $bam > $prefix-unmapped.fasta
+samtools view $bam -H > $prefix-unmapped.sam
+
+samtools view $bam | awk '$2==77 || $2==141 || $2==4' >> $prefix-unmapped.sam
+
+singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools fasta $prefix-unmapped.sam > $prefix-unmapped.fasta
 
 random_fasta_ids=$(cat $prefix-unmapped.fasta | grep '>' | shuf -n 50)
 
@@ -35,7 +39,7 @@ singularity exec --bind $bind_dir $BLAST_CONTAINER blastn \
     -evalue $blast_evalue \
     -perc_identity $blast_perc_identity \
     -max_target_seqs $blast_target_seqs \
-    -qcov_hsp_perc 90 \
+    -qcov_hsp_perc 95 \
     -out $prefix-unmapped.txt
 
 mod_blast_args="${blast_args/6 /}"
