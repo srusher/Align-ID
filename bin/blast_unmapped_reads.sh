@@ -12,9 +12,9 @@ blast_evalue=$5
 blast_perc_identity=$6
 blast_target_seqs=$7
 
-samtools view $bam -H > $prefix-unmapped.sam
+singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view $bam -H > $prefix-unmapped.sam
 
-samtools view $bam | awk '$2==77 || $2==141 || $2==4' >> $prefix-unmapped.sam
+singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools view $bam | awk '$2==77 || $2==141 || $2==4' >> $prefix-unmapped.sam
 
 singularity exec --bind $bind_dir $SAMTOOLS_CONTAINER samtools fasta $prefix-unmapped.sam > $prefix-unmapped.fasta
 
