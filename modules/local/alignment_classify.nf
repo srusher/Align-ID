@@ -20,12 +20,17 @@ process ALIGNMENT_CLASSIFY {
     script:
     def prefix = "${meta.id}"
 
+    // removing the actual SAM DB file, not just the link - to conserve storage space
+    def cleanup = params.keep_sam_database ? '' : "rm -f \"\$(readlink -f ${sam_db})\""
+
     if (params.workflow == "long-read") {
     
         """
 
         python "${projectDir}/bin/alignment_classify_SE.py" $prefix $bam $sam_db ${projectDir}/${params.ncbi_taxonomy_names} ${params.mapping_quality}
 
+		${cleanup}
+		
         """
 
     } else if (params.workflow == "short-read") {
@@ -40,6 +45,8 @@ process ALIGNMENT_CLASSIFY {
             python "${projectDir}/bin/alignment_classify_PE.py" $prefix $bam $sam_db ${projectDir}/${params.ncbi_taxonomy_names} ${params.mapping_quality} 
 
         fi
+
+		${cleanup}
 
         """
 

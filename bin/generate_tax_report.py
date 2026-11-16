@@ -172,7 +172,6 @@ def main():
 		total_organism_reads = total_organism_reads + int(num_reads)
 
 
-
 	tax_dict = {}
 	count = 0
 
@@ -203,11 +202,11 @@ def main():
 				tax_id = name_dict.get(species)
 				stats = coverage_stats.get(tax_id, {})
 
-				tax_dict[species][8] = round(stats.get('coverage_pct', 'NA'), 3)
-				tax_dict[species][9] = round(stats.get('mean_depth', 'NA'), 3)
-				tax_dict[species][10] = stats.get('genome_length', 'NA')
-				tax_dict[species][11] = stats.get('n_contigs', 'NA')
-				tax_dict[species][12] = round(stats.get('mean_mapq', 'NA'), 3)
+				tax_dict[species][8] = round(float(stats.get('coverage_pct', '0')), 3)
+				tax_dict[species][9] = round(float(stats.get('mean_depth', '0')), 3)
+				tax_dict[species][10] = stats.get('genome_length', '0')
+				tax_dict[species][11] = stats.get('n_contigs', '0')
+				tax_dict[species][12] = round(float(stats.get('mean_mapq', '0')), 3)
 			
 			if ambiguity == 'none':
 
