@@ -144,15 +144,15 @@ def main():
 
 	coverage_stats = parse_coverage(coverage_file, tax_map)
 
-	total_reads = 0
+	# total_reads = 0
 
-	if read_count_file:
+	# # if read_count_file:
 
-		with open(read_count_file) as fh:
+	# # 	with open(read_count_file) as fh:
 
-			top_line = fh.readline().strip()
+	# # 		top_line = fh.readline().strip()
 
-		total_reads = int(top_line)
+	# # 	total_reads = int(top_line)
 
 	total_organism_reads = 0
 	count = 0
@@ -203,20 +203,20 @@ def main():
 				tax_id = name_dict.get(species)
 				stats = coverage_stats.get(tax_id, {})
 
-				tax_dict[species][8] = stats.get('coverage_pct', 'NA')
-				tax_dict[species][9] = stats.get('mean_depth', 'NA')
+				tax_dict[species][8] = round(stats.get('coverage_pct', 'NA'), 3)
+				tax_dict[species][9] = round(stats.get('mean_depth', 'NA'), 3)
 				tax_dict[species][10] = stats.get('genome_length', 'NA')
 				tax_dict[species][11] = stats.get('n_contigs', 'NA')
-				tax_dict[species][12] = stats.get('mean_mapq', 'NA')
+				tax_dict[species][12] = round(stats.get('mean_mapq', 'NA'), 3)
 			
 			if ambiguity == 'none':
 
 				values = tax_dict[species]
 
 				values[0] = values[0] + num_reads
-				values[1] = round(float(values[1]) + 100 * (num_reads/total_reads) if (read_count_file) else float(values[1]) + percent, 3)
+				values[1] = round(float(values[1]) + percent, 3)
 				values[2] = num_reads
-				values[3] = percent
+				values[3] = round(percent, 3)
 
 				tax_dict[species] = values
 			
@@ -225,9 +225,9 @@ def main():
 				values = tax_dict[species]
 
 				values[0] = values[0] + num_reads
-				values[1] = round(float(values[1]) + 100 * (num_reads/total_reads) if (read_count_file) else float(values[1]) + percent, 3)
+				values[1] = round(float(values[1]) + percent, 3)
 				values[4] = num_reads
-				values[5] = percent
+				values[5] = round(percent, 3)
 
 				tax_dict[species] = values
 
@@ -236,9 +236,9 @@ def main():
 				values = tax_dict[species]
 
 				values[0] = values[0] + num_reads
-				values[1] = round(float(values[1]) + 100 * (num_reads/total_reads) if (read_count_file) else float(values[1]) + percent, 3)
+				values[1] = round(float(values[1]) + percent, 3)
 				values[6] = num_reads
-				values[7] = percent
+				values[7] = round(percent, 3)
 
 				tax_dict[species] = values
 
